@@ -12,11 +12,14 @@ impl ClickyEvents {
 
         for device in devices {
             if device.events_supported().contains(evdev::KEY) {
-                println!("using device {:?}", &device);
+                println!("using device {:?}", &device.name());
                 kbd_devices.push(device);
             }
         }
 
+        if kbd_devices.len() == 0 {
+            println!("No devices with key output found; missing permissions to /dev/input?");
+        }
         ClickyEvents {
             devices: kbd_devices,
         }
