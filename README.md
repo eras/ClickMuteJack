@@ -15,6 +15,14 @@ To work this of course needs a short delay. For me a 60-millisecond
 buffer is enough, and Pipewire is configured with
 `PIPEWIRE_LATENCY=128/48000`.
 
+## Installation
+
+1) Install the Rust compiler with Cargo e.g. with https://rustup.rs/
+
+2) `cargo install --git https://github.com/eras/ClickMuteJack`
+
+3) `$HOME/.cargo/bin/click_mute` has now been installed
+
 ## Setting it up with Pipewire
 
 1) create a source that is visible in the PulseAudio side:
