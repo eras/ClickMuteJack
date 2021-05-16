@@ -34,7 +34,7 @@ impl ClickyEvents {
             // TODO: handle device disappearing gracefully
             let events = device.events().unwrap();
             for event in events {
-                if ((1 as u32) << event._type) & evdev::KEY.bits() != 0
+                if ((1_u32) << event._type) & evdev::KEY.bits() != 0
                     && (event.value == 0 || event.value == 1)
                 {
                     let mut usec_delta = time_t1.tv_nsec / 1000 - event.time.tv_usec;
@@ -43,23 +43,6 @@ impl ClickyEvents {
                         usec_delta += 1000000;
                         sec_delta -= 1;
                     }
-                    // let delta = sec_delta as f32 + usec_delta as f32 / 1000000.0;
-                    // let sample_delta = (delta as f32 * self.sample_rate) as usize;
-                    // if sample_delta < sample_count_in {
-                    //     let sample_index = sample_count_in - 1 - sample_delta;
-                    //     println!(
-                    //         "{:?}.{:?} vs {:?}.{:?} -> {:?} {} samples Got some events! {:?}",
-                    //         time_t1.tv_sec,
-                    //         time_t1.tv_nsec,
-                    //         event.time.tv_sec,
-                    //         event.time.tv_usec,
-                    //         delta,
-                    //         sample_index,
-                    //         event
-                    //     );
-                    // } else {
-                    //     println!("too old keyboard event");
-                    // }
                     let delta = f64::min(-0.0, -(sec_delta as f64 + usec_delta as f64 / 1000000.0));
 
                     clicked = match clicked {
