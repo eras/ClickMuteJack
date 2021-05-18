@@ -1,25 +1,20 @@
-use std::sync::{Arc, Condvar, Mutex};
+use crate::level_event::LevelEvent;
+use std::sync::{Arc, Mutex};
 use std::{thread, time};
 extern crate libc;
 
 pub struct ClickyEvents {
     devices: Arc<Mutex<Vec<evdev::Device>>>,
     reenumerator_join: Option<thread::JoinHandle<()>>,
-    reenumerator_stop: Arc<(Mutex<bool>, Condvar)>,
+    reenumerator_stop: LevelEvent,
 }
 
 fn reenumerator_thread(
     clicky_devices: Arc<Mutex<Vec<evdev::Device>>>,
-    reenumerator_stop: Arc<(Mutex<bool>, Condvar)>,
+    reenumerator_stop: LevelEvent,
 ) {
     let mut first = true;
-    while !{
-        let &(ref lock, ref condvar) = &*reenumerator_stop;
-        let lock = condvar
-            .wait_timeout(lock.lock().unwrap(), time::Duration::from_millis(1000))
-            .unwrap();
-        *lock.0
-    } {
+    while !reenumerator_stop.wait_timeout(time::Duration::from_millis(1000)) {
         let devices = evdev::enumerate();
         let mut kbd_devices: Vec<evdev::Device> = vec![];
 
@@ -48,7 +43,7 @@ impl ClickyEvents {
     pub fn new() -> ClickyEvents {
         let kbd_devices = Arc::new(Mutex::new(vec![]));
 
-        let reenumerator_stop = Arc::new((Mutex::new(false), Condvar::new()));
+        let reenumerator_stop = LevelEvent::new();
 
         let reenumerator_join = Option::Some({
             let kbd_devices = kbd_devices.clone();
@@ -64,9 +59,7 @@ impl ClickyEvents {
     }
 
     pub fn stop(&mut self) {
-        let &(ref lock, ref condvar) = &*self.reenumerator_stop;
-        *lock.lock().unwrap() = true;
-        condvar.notify_one();
+        self.reenumerator_stop.activate();
         match self.reenumerator_join.take() {
             Some(join) => join.join().unwrap(),
             None => {
