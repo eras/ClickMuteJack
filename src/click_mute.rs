@@ -1,6 +1,6 @@
 use crate::{clicky_events::ClickyEvents, delay::Delay, fader::Fader};
 // use crossbeam_channel::bounded;
-use std::io;
+use crate::level_event::LevelEvent;
 use std::sync::{Arc, Mutex};
 
 struct ClickMute {
@@ -155,7 +155,7 @@ impl ClickMute {
     }
 }
 
-pub fn main() {
+pub fn main(exit: LevelEvent) {
     let (client, _status) =
         jack::Client::new("click_mute", jack::ClientOptions::NO_START_SERVER).unwrap();
 
@@ -178,10 +178,8 @@ pub fn main() {
 
     let active_client = client.activate_async((), process).unwrap();
 
-    println!("^D to exit");
-    let mut user_input = String::new();
-    // ignore result
-    let _ = io::stdin().read_line(&mut user_input);
+    // TODO: handle jack errors
+    exit.wait();
 
     active_client.deactivate().unwrap();
 
