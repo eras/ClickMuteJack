@@ -1,6 +1,7 @@
 use crate::{clicky_events::ClickyEvents, delay::Delay, fader::Fader};
 // use crossbeam_channel::bounded;
 use std::io;
+use std::sync::{Arc, Mutex};
 
 struct ClickMute {
     in_a: jack::Port<jack::AudioIn>,
@@ -83,6 +84,10 @@ impl ClickMute {
         }
     }
 
+    fn stop(&mut self) {
+        self.clicky_events.stop()
+    }
+
     fn process(&mut self, ps: &jack::ProcessScope) -> jack::Control {
         let in_a = self.in_a.as_slice(ps);
         let in_b = self.in_b.as_slice(ps);
@@ -154,12 +159,22 @@ pub fn main() {
     let (client, _status) =
         jack::Client::new("click_mute", jack::ClientOptions::NO_START_SERVER).unwrap();
 
-    let mut mute = ClickMute::new(&client);
+    let mute = Arc::new(Mutex::new(Some(ClickMute::new(&client))));
 
     // let (tx, rx) = bounded(1_000_000);
-    let process = jack::ClosureProcessHandler::new(
-        move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control { mute.process(&ps) },
-    );
+    let process = jack::ClosureProcessHandler::new({
+        let mute = mute.clone();
+        move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
+            if let Ok(mut x) = mute.lock() {
+                match &mut *x {
+                    Some(click_mute) => click_mute.process(&ps),
+                    None => jack::Control::Quit,
+                }
+            } else {
+                jack::Control::Quit
+            }
+        }
+    });
 
     let active_client = client.activate_async((), process).unwrap();
 
@@ -169,4 +184,11 @@ pub fn main() {
     let _ = io::stdin().read_line(&mut user_input);
 
     active_client.deactivate().unwrap();
+
+    if let Ok(mut x) = mute.lock() {
+        match &mut *x {
+            Some(click_mute) => click_mute.stop(),
+            None => (),
+        }
+    };
 }
