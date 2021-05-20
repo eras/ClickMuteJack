@@ -1,5 +1,6 @@
 use crate::{clicky_events::ClickyEvents, delay::Delay, fader::Fader};
 // use crossbeam_channel::bounded;
+use crate::click_info::ClickInfo;
 use crate::level_event::LevelEvent;
 use std::sync::{Arc, Mutex};
 
@@ -27,10 +28,12 @@ struct ClickMute {
 
     mute_t0_index: Option<usize>,
     mute_t1_index: usize,
+
+    click_info: Arc<Mutex<ClickInfo>>,
 }
 
 impl ClickMute {
-    fn new(client: &jack::Client) -> ClickMute {
+    fn new(client: &jack::Client, click_info: Arc<Mutex<ClickInfo>>) -> ClickMute {
         let in_a = client
             .register_port("in_a", jack::AudioIn::default())
             .unwrap();
@@ -81,6 +84,8 @@ impl ClickMute {
             sample_index: 0,
             mute_t0_index: None,
             mute_t1_index: 0,
+
+            click_info,
         }
     }
 
@@ -120,20 +125,24 @@ impl ClickMute {
             }
         }
 
+        let mut click_info = self.click_info.lock().unwrap();
+
         for (((in_a, in_b), out_a), out_b) in (in_a.iter())
             .zip(in_b.iter())
             .zip(out_a.iter_mut())
             .zip(out_b.iter_mut())
         {
             if Some(self.sample_index) == self.mute_t0_index {
-                println!("fade out at {}", self.sample_index);
                 self.fader_a.fade_out(self.fade_samples);
                 self.fader_b.fade_out(self.fade_samples);
                 self.mute_t0_index = None;
+                click_info.click_sampler.trigger();
             }
 
             let a = self.delay_a.process(*in_a);
             let b = self.delay_b.process(*in_b);
+            click_info.live_sampler.sample(*in_a); // undelayed sample
+            click_info.click_sampler.sample(a); // delayed sample
             let (a, b) = (self.fader_a.process(a), self.fader_b.process(b));
             // let muting =
             //     self.mute_t0_index <= self.sample_index && self.sample_index <= self.mute_t1_index;
@@ -143,9 +152,11 @@ impl ClickMute {
             *out_b = b;
 
             if self.sample_index == self.mute_t1_index {
-                println!("fade in at {}", self.sample_index);
                 self.fader_a.fade_in(self.fade_samples);
                 self.fader_b.fade_in(self.fade_samples);
+                if !click_info.click_sampler.is_empty() {
+                    click_info.click_sampler.hold();
+                }
             }
 
             self.sample_index += 1
@@ -155,11 +166,11 @@ impl ClickMute {
     }
 }
 
-pub fn main(exit: LevelEvent) {
+pub fn main(exit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>) {
     let (client, _status) =
         jack::Client::new("click_mute", jack::ClientOptions::NO_START_SERVER).unwrap();
 
-    let mute = Arc::new(Mutex::new(Some(ClickMute::new(&client))));
+    let mute = Arc::new(Mutex::new(Some(ClickMute::new(&client, click_info))));
 
     // let (tx, rx) = bounded(1_000_000);
     let process = jack::ClosureProcessHandler::new({

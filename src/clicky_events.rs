@@ -20,9 +20,6 @@ fn reenumerator_thread(
 
         for device in devices {
             if device.events_supported().contains(evdev::KEY) {
-                if first {
-                    println!("using device {:?}", &device.name());
-                }
                 kbd_devices.push(device);
             }
         }
