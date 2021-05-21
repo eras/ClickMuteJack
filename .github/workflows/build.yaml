@@ -1,0 +1,17 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install build deps
+        run: sudo apt-get install libglvnd-dev libxi-dev libjack-jackd2-dev
+      - uses: actions-rs/toolchain@v1
+        with:
+          # non-stable needed to use -Z unstable-options --config
+          toolchain: nightly
+      - run: 'cargo +nightly -Z unstable-options --config rustc-link-search=\"/usr/lib/x86_64-linux-gnu\" build'
