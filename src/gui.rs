@@ -17,8 +17,6 @@ struct Stage {
     egui_mq: egui_mq::EguiMq,
     quit: LevelEvent,
 
-    counter: i32,
-
     // shared data with click_mute
     click_info: Arc<Mutex<ClickInfo>>,
 
@@ -26,33 +24,17 @@ struct Stage {
     plot_mode: PlotMode,
 }
 
-fn ui_counter(ui: &mut egui::Ui, counter: &mut i32) {
-    // Put the buttons and label on the same row:
-    ui.horizontal(|ui| {
-        if ui.button("-").clicked() {
-            *counter -= 1;
-        }
-        ui.label(counter.to_string());
-        if ui.button("+").clicked() {
-            *counter += 1;
-        }
-    });
-}
-
 impl Stage {
     fn new(ctx: &mut mq::Context, quit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>) -> Self {
         Self {
             egui_mq: egui_mq::EguiMq::new(ctx),
             quit,
-            counter: 0,
             click_info,
             plot_mode: PlotMode::LiveSignal,
         }
     }
 
     fn ui(&mut self) {
-        let Self { counter, .. } = self;
-
         let plot_mode = &mut self.plot_mode;
 
         let egui_ctx = self.egui_mq.egui_ctx();
@@ -66,8 +48,6 @@ impl Stage {
             }
 
             ui.separator();
-
-            ui_counter(ui, &mut *counter);
 
             ui.horizontal(|ui| {
                 ui.selectable_value(plot_mode, PlotMode::NoView, "No view");
