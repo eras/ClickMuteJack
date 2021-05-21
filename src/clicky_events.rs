@@ -95,13 +95,20 @@ impl ClickyEvents {
                                     -0.0,
                                     -(sec_delta as f64 + usec_delta as f64 / 1000000.0),
                                 );
-
-                                clicked = match clicked {
-                                    None => Some((delta, delta)),
-                                    Some((oldest, newest)) => {
-                                        Some((f64::min(oldest, delta), f64::max(newest, delta)))
-                                    }
-                                };
+                                if delta < -0.100 {
+                                    // https://github.com/eras/ClickMuteJack/issues/6
+                                    println!(
+					"Dropped too old event value {} at {}+{} -> delta {} (issue #6)",
+					event.value, sec_delta, usec_delta, delta
+                                    );
+                                } else {
+                                    clicked = match clicked {
+                                        None => Some((delta, delta)),
+                                        Some((oldest, newest)) => {
+                                            Some((f64::min(oldest, delta), f64::max(newest, delta)))
+                                        }
+                                    };
+                                }
                             }
                         }
                     }
