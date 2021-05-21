@@ -14,7 +14,11 @@ fn reenumerator_thread(
     reenumerator_stop: LevelEvent,
 ) {
     let mut first = true;
-    while !reenumerator_stop.wait_timeout(time::Duration::from_millis(1000)) {
+    while if first {
+        true
+    } else {
+        !reenumerator_stop.wait_timeout(time::Duration::from_millis(1000))
+    } {
         let devices = evdev::enumerate();
         let mut kbd_devices: Vec<evdev::Device> = vec![];
 
