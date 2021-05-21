@@ -47,7 +47,7 @@ impl ClickMute {
             .register_port("out_b", jack::AudioOut::default())
             .unwrap();
 
-        let mute_offset_seconds = -0.06; // delta from the time we detect an event to until we mute sound (so, negative because we hear it before we get the vent)
+        let mute_offset_seconds = -0.04; // delta from the time we detect an event to until we mute sound (so, negative because we hear it before we get the vent)
         let delay_seconds = -mute_offset_seconds; // size of the delay buffer in seconds; sensibly just as long as the mute_offset is
         let mute_duration_seconds = 0.08; // how long do we mute for?
         let fade_seconds = 0.01; // how long is the fade in/out to avoid pops?
