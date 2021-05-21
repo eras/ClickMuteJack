@@ -2,6 +2,8 @@
 
 Licensed under the [MIT license](LICENSE.MIT).
 
+![Screenshot of ClickMuteJack with Jack Qjackctl and its patchbay](doc/screenshot.png)
+
 A tool for helping with teleconferencing, when you have loud input
 devices. Such as a mechanical keyboard..
 
