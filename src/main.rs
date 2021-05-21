@@ -1,5 +1,3 @@
-#![feature(format_args_capture)]
-
 mod click_info;
 mod click_mute;
 mod clicky_events;
