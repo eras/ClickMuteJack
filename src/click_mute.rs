@@ -143,7 +143,11 @@ impl ClickMute {
             let b = self.delay_b.process(*in_b);
             click_info.live_sampler.sample(*in_a); // undelayed sample
             click_info.click_sampler.sample(a); // delayed sample
-            let (a, b) = (self.fader_a.process(a), self.fader_b.process(b));
+            let (a, b) = if click_info.mute_enabled {
+                (self.fader_a.process(a), self.fader_b.process(b))
+            } else {
+                (a, b)
+            };
             // let muting =
             //     self.mute_t0_index <= self.sample_index && self.sample_index <= self.mute_t1_index;
             // let a = if muting { 0.0 } else { a };

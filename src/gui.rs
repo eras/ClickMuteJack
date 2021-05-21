@@ -15,7 +15,6 @@ enum PlotMode {
 
 struct Stage {
     egui_mq: egui_mq::EguiMq,
-    mute_enabled: bool,
     quit: LevelEvent,
 
     counter: i32,
@@ -44,7 +43,6 @@ impl Stage {
     fn new(ctx: &mut mq::Context, quit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>) -> Self {
         Self {
             egui_mq: egui_mq::EguiMq::new(ctx),
-            mute_enabled: true,
             quit,
             counter: 0,
             click_info,
@@ -53,11 +51,7 @@ impl Stage {
     }
 
     fn ui(&mut self) {
-        let Self {
-            mute_enabled,
-            counter,
-            ..
-        } = self;
+        let Self { counter, .. } = self;
 
         let plot_mode = &mut self.plot_mode;
 
@@ -66,7 +60,10 @@ impl Stage {
         let click_info = self.click_info.clone();
 
         egui::CentralPanel::default().show(egui_ctx, |ui| {
-            ui.checkbox(mute_enabled, "Automatic muting enabled");
+            {
+                let mut click_info = click_info.lock().unwrap();
+                ui.checkbox(&mut click_info.mute_enabled, "Automatic muting enabled");
+            }
 
             ui.separator();
 
