@@ -1,0 +1,4 @@
+[delays]
+mute_offset = -0.04
+mute_duration = 0.08
+fade = 0.01
