@@ -123,6 +123,8 @@ impl ClickMute {
                 //     self.mute_t1_index as i64 - self.sample_index as i64
                 // );
                 assert!(Some(self.mute_t1_index) >= self.mute_t0_index);
+                let mut click_info = self.click_info.lock().unwrap();
+                click_info.num_clicks += 1;
             }
         }
 
