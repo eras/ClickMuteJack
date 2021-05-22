@@ -4,6 +4,7 @@ use crate::click_info::ClickInfo;
 use crate::click_mute_control;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
+use crate::save::Save;
 use std::sync::{Arc, Mutex};
 
 struct ClickMute {
@@ -33,6 +34,8 @@ struct ClickMute {
 
     click_info: Arc<Mutex<ClickInfo>>,
     control: click_mute_control::Receiver,
+
+    save: Option<(Save, Save, Save, Save, bool)>,
 }
 
 impl ClickMute {
@@ -95,6 +98,15 @@ impl ClickMute {
 
             click_info,
             control,
+
+            save: None,
+            // save: Some((
+            //     Save::new(1, "0.wav"),
+            //     Save::new(1, "1.wav"),
+            //     Save::new(1, "2.wav"),
+            //     Save::new(1, "3.wav"),
+            //     false,
+            // )),
         }
     }
 
@@ -182,17 +194,32 @@ impl ClickMute {
                 }
                 self.mute_t0_index = None;
                 click_info.click_sampler.trigger();
+                self.save.iter_mut().for_each(|x| x.4 = !x.4);
             }
+
+            if let Some(ref mut save) = self.save {
+                save.0.process(*in_a);
+            };
 
             let a = self.delay_a.process(*in_a);
             let b = self.delay_b.process(*in_b);
+
+            self.save.iter_mut().for_each(|x| x.1.process(a));
+
             click_info.live_sampler.sample(*in_a); // undelayed sample
             click_info.click_sampler.sample(a); // delayed sample
+
             let (a, b) = if click_info.mute_enabled {
                 (self.fader_a.process(a), self.fader_b.process(b))
             } else {
                 (a, b)
             };
+            self.save.iter_mut().for_each(|x| x.2.process(a));
+
+            self.save
+                .iter_mut()
+                .for_each(|x| x.3.process(if x.4 { 1.0 } else { 0.0 }));
+
             // let muting =
             //     self.mute_t0_index <= self.sample_index && self.sample_index <= self.mute_t1_index;
             // let a = if muting { 0.0 } else { a };

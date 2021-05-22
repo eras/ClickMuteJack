@@ -9,6 +9,7 @@ mod fader;
 mod gui;
 mod level_event;
 mod sampler;
+mod save;
 
 use crate::click_info::ClickInfo;
 use crate::config::Config;
