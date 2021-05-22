@@ -32,7 +32,7 @@ fn reenumerator_thread(
     while if first {
         true
     } else {
-        !reenumerator_stop.wait_timeout(time::Duration::from_millis(1000))
+        !reenumerator_stop.wait_timeout(time::Duration::from_millis(20000))
     } {
         let devices = evdev::enumerate();
         let mut key_devices: Vec<evdev::Device> = vec![];
