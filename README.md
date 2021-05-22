@@ -1,8 +1,10 @@
 # Click Muter for Jack
 
+Copyright Erkki Seppälä <erkki.seppala@vincit.fi> 2021
+
 Licensed under the [MIT license](LICENSE.MIT).
 
-![Screenshot of ClickMuteJack with Jack Qjackctl and its patchbay](doc/screenshot.png)
+![Screenshot of ClickMuteJack with Jack Qjackctl and its patch bay](doc/screenshot.png)
 
 A tool for helping with teleconferencing, when you have loud input
 devices. Such as a mechanical keyboard..
@@ -13,17 +15,23 @@ input arrives, its timing is checked and muting is applied for the
 pre-configured duration. Finally the module outputs a jack stream that
 can be used in place of the microphone.
 
-To work this of course needs a short delay. For me a 60-millisecond
+To work this of course needs a short delay. For me a 45-millisecond
 buffer is enough, and Pipewire is configured with
 `PIPEWIRE_LATENCY=128/48000`.
 
 ## Installation
 
+If the Ubuntu 20.04 -based binary on the [GitHub releases
+page](../../releases/latest/) works for you, maybe use that?
+Otherwise:
+
 1) Install the Rust compiler with Cargo e.g. with https://rustup.rs/
 
-2) `cargo install --git https://github.com/eras/ClickMuteJack`
+2) `sudo apt-get install libglvnd-dev libxi-dev libjack-jackd2-dev`
 
-3) `$HOME/.cargo/bin/click_mute` has now been installed
+3) `cargo install --git https://github.com/eras/ClickMuteJack`
+
+4) `$HOME/.cargo/bin/click_mute` has now been installed
 
 ## Setting it up with Pipewire
 
@@ -43,7 +51,7 @@ input and activate the patchbay.
 3) Set `my-source` as the default input in your audio control tool, such as
 `pavucontrol`
 
-4) Maybe restart your browser to re-enumrate audio devices; it seems
+4) Maybe restart your browser to re-enumerate audio devices; it seems
 the `pactl` command does not cause a plug-in event to make it happen
 automatically.
 
@@ -57,4 +65,23 @@ cause an audio loop.
 Results not satisfactory? Adjust the parameters `mute_offset_seconds`
 and `mute_duration_seconds` in [`click_mute.rs`](src/click_mute.rs).
 
-Erkki Seppälä <erkki.seppala@vincit.fi>
+## Configuring
+
+The current settings can be saved with the Save-button to
+`click_mute.ini`. You can find the defaults from
+[click_mute.ini.example](click_mute.ini.example).
+
+### Parameters
+
+`mute_offset`: number of seconds from the reception of the keyboard
+event, to the time when we fade the microphone out. Due to delays
+involved, this number can be negative. The default value is -0.045, so
+45 milliseconds before the event, and it's a number that works on my
+setup.
+
+`mute_duration`: for how many seconds to mute the mic? 0.05, or 50
+milliseconds, works for me.
+
+`fade`: abruptly adjusting volume results in popping sound, so this
+tells how many seconds to spend in fading in/out. A small value like
+0.010 for 10 milliseconds is good.
