@@ -224,6 +224,7 @@ impl mq::EventHandler for Stage {
 
 pub fn main(quit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>) {
     let conf = mq::conf::Conf {
+        window_title: String::from("Click Mute"),
         // high_dpi: true,
         window_height: 200,
         window_width: 600,
