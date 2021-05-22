@@ -233,7 +233,7 @@ impl ClickMute {
                     self.fader_b.fade_in(self.fade_samples);
                 }
                 if !click_info.click_sampler.is_empty() {
-                    click_info.click_sampler.hold();
+                    click_info.click_sampler.hold_or_auto_hold();
                 }
             }
 

@@ -3,6 +3,8 @@ use std::time::Instant;
 #[derive(Clone)]
 pub enum Mode {
     Capture,                      // captures
+    AutoCapture,                  // captures after trigger; and then again after next trigger
+    AutoHold,                     // captures after trigger; and then again after next trigger
     CaptureAfterTrigger(Instant), // goes to Capture after instant passes; don't sample in the meanwhile
     Hold,                         // don't sample
 }
@@ -37,12 +39,31 @@ impl Sampler {
         self.mode = Mode::CaptureAfterTrigger(after);
     }
 
+    pub fn auto(&mut self) {
+        self.mode = Mode::AutoCapture;
+    }
+
     pub fn is_empty(&self) -> bool {
         self.read_index == self.write_index
     }
 
     pub fn is_in_hold(&self) -> bool {
         matches!(self.mode, Mode::Hold)
+    }
+
+    pub fn is_in_auto(&self) -> bool {
+        matches!(self.mode, Mode::AutoCapture | Mode::AutoHold)
+    }
+
+    pub fn is_in_auto_hold(&self) -> bool {
+        matches!(self.mode, Mode::AutoHold)
+    }
+
+    pub fn hold_or_auto_hold(&mut self) {
+        self.mode = match self.mode {
+            Mode::AutoCapture | Mode::AutoHold => Mode::AutoHold,
+            _ => Mode::Hold,
+        };
     }
 
     pub fn hold(&mut self) {
@@ -58,6 +79,10 @@ impl Sampler {
             Mode::Capture => Mode::Capture,
             Mode::CaptureAfterTrigger(after) if Instant::now() >= *after => Mode::Capture,
             Mode::CaptureAfterTrigger(after) => Mode::CaptureAfterTrigger(*after),
+            (Mode::AutoHold | Mode::AutoCapture) => {
+                self.clear();
+                Mode::AutoCapture
+            }
             Mode::Hold => Mode::Hold,
         };
     }
@@ -65,12 +90,14 @@ impl Sampler {
     pub fn is_waiting(&self) -> bool {
         match &self.mode {
             Mode::Capture | Mode::Hold => false,
+            Mode::AutoCapture => false,
+            Mode::AutoHold => true,
             Mode::CaptureAfterTrigger(_) => true,
         }
     }
 
     pub fn sample(&mut self, sample: f32) {
-        if matches!(self.mode, Mode::Capture) {
+        if matches!(self.mode, Mode::Capture | Mode::AutoCapture) {
             if self.data.len() == self.max_size {
                 self.data[self.write_index] = sample;
                 self.write_index = (self.write_index + 1) % self.max_size;

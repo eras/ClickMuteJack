@@ -157,14 +157,31 @@ impl Stage {
                             click_sampler.hold();
                         }
                     }
+
+                    if ui
+                        .selectable_label(click_sampler.is_in_auto(), "Auto")
+                        .clicked()
+                    {
+                        if click_sampler.is_in_auto() {
+                            click_sampler.hold();
+                        } else {
+                            click_sampler.auto();
+                        }
+                    }
                 }
             });
 
+            let click_info = click_info.lock().unwrap();
             match *plot_mode {
                 PlotMode::NoView => (),
+                _ if !click_info.click_sampler.is_in_auto_hold()
+                    && click_info.click_sampler.is_in_auto() =>
+                {
+                    ()
+                }
                 _ => {
-                    let click_info = click_info.lock().unwrap();
-                    let (sampler, sample_max_x) = if click_info.click_sampler.is_in_hold()
+                    let (sampler, sample_max_x) = if (click_info.click_sampler.is_in_hold()
+                        | click_info.click_sampler.is_in_auto_hold())
                         && !click_info.click_sampler.is_empty()
                         && *plot_mode == PlotMode::Capture
                     {
