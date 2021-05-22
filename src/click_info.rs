@@ -6,6 +6,7 @@ pub struct ClickInfo {
     pub click_sampler: Sampler,
     pub click_time_delta: f64,
     pub mute_enabled: bool,
+    pub invert_mute: bool,
     pub num_clicks: usize,
 }
 
@@ -20,6 +21,7 @@ impl ClickInfo {
             },
             click_time_delta: 0.0,
             mute_enabled: true,
+            invert_mute: false,
             num_clicks: 0,
         }
     }

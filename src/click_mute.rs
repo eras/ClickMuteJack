@@ -173,8 +173,13 @@ impl ClickMute {
             .zip(out_b.iter_mut())
         {
             if Some(self.sample_index) == self.mute_t0_index {
-                self.fader_a.fade_out(self.fade_samples);
-                self.fader_b.fade_out(self.fade_samples);
+                if (click_info.invert_mute) {
+                    self.fader_a.fade_in(self.fade_samples);
+                    self.fader_b.fade_in(self.fade_samples);
+                } else {
+                    self.fader_a.fade_out(self.fade_samples);
+                    self.fader_b.fade_out(self.fade_samples);
+                }
                 self.mute_t0_index = None;
                 click_info.click_sampler.trigger();
             }
@@ -196,8 +201,13 @@ impl ClickMute {
             *out_b = b;
 
             if self.sample_index == self.mute_t1_index {
-                self.fader_a.fade_in(self.fade_samples);
-                self.fader_b.fade_in(self.fade_samples);
+                if (click_info.invert_mute) {
+                    self.fader_a.fade_out(self.fade_samples);
+                    self.fader_b.fade_out(self.fade_samples);
+                } else {
+                    self.fader_a.fade_in(self.fade_samples);
+                    self.fader_b.fade_in(self.fade_samples);
+                }
                 if !click_info.click_sampler.is_empty() {
                     click_info.click_sampler.hold();
                 }
