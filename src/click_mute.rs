@@ -133,11 +133,8 @@ impl ClickMute {
     }
 
     fn process_control(&mut self) {
-        match self.control.try_recv() {
-            Ok(click_mute_control::Message::UpdateConfig(config)) => {
-                self.update_config(config);
-            }
-            Err(_) => (),
+        if let Ok(click_mute_control::Message::UpdateConfig(config)) = self.control.try_recv() {
+            self.update_config(config);
         }
     }
 

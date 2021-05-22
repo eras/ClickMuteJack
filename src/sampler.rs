@@ -42,10 +42,7 @@ impl Sampler {
     }
 
     pub fn is_in_hold(&self) -> bool {
-        match self.mode {
-            Mode::Hold => true,
-            _ => false,
-        }
+        matches!(self.mode, Mode::Hold)
     }
 
     pub fn hold(&mut self) {
@@ -73,20 +70,17 @@ impl Sampler {
     }
 
     pub fn sample(&mut self, sample: f32) {
-        match self.mode {
-            Mode::Capture => {
-                if self.data.len() == self.max_size {
-                    self.data[self.write_index] = sample;
-                    self.write_index = (self.write_index + 1) % self.max_size;
-                    if self.write_index == self.read_index {
-                        self.read_index = (self.read_index + 1) % self.max_size;
-                    }
-                } else {
-                    self.data.push(sample);
-                    self.write_index = (self.write_index + 1) % self.max_size;
+        if matches!(self.mode, Mode::Capture) {
+            if self.data.len() == self.max_size {
+                self.data[self.write_index] = sample;
+                self.write_index = (self.write_index + 1) % self.max_size;
+                if self.write_index == self.read_index {
+                    self.read_index = (self.read_index + 1) % self.max_size;
                 }
+            } else {
+                self.data.push(sample);
+                self.write_index = (self.write_index + 1) % self.max_size;
             }
-            _ => (),
         }
     }
 
@@ -97,7 +91,7 @@ impl Sampler {
             part1.extend_from_slice(&part2);
             part1
         } else {
-            return self.data[self.read_index..self.write_index].to_vec();
+            self.data[self.read_index..self.write_index].to_vec()
         }
     }
 }

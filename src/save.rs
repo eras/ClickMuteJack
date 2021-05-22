@@ -1,5 +1,3 @@
-use hound;
-
 pub struct Save {
     writer: hound::WavWriter<std::io::BufWriter<std::fs::File>>,
 }

@@ -33,7 +33,6 @@ fn main() -> Result<(), error::Error> {
     let gui_join = {
         let mut exit_flag = exit_flag.clone();
         let click_info = click_info.clone();
-        let config = config.clone();
         thread::spawn(move || {
             gui::main(exit_flag.clone(), click_info, config, send_control);
             exit_flag.activate();
@@ -41,7 +40,6 @@ fn main() -> Result<(), error::Error> {
     };
     let click_mute_join = {
         let mut exit_flag = exit_flag.clone();
-        let click_info = click_info.clone();
         thread::spawn(move || {
             click_mute::main(exit_flag.clone(), click_info, config, recv_control);
             exit_flag.activate();

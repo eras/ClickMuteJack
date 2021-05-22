@@ -1,4 +1,3 @@
-use atomicwrites;
 use serde_derive::{Deserialize, Serialize};
 use std::fmt;
 use std::fs;

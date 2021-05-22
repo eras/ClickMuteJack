@@ -9,11 +9,17 @@ pub struct LevelEvent {
 impl LevelEvent {
     pub fn new() -> LevelEvent {
         LevelEvent {
-            flag: Arc::new((Mutex::new(false), Condvar::new())),
+            flag: Arc::new((
+                // cannot use AtomicBool due to using the mutex with the condition variable
+                #[allow(clippy::mutex_atomic)]
+                Mutex::new(false),
+                Condvar::new(),
+            )),
         }
     }
 
     pub fn test(&self) -> bool {
+        #[allow(clippy::mutex_atomic)]
         *self.flag.0.lock().unwrap()
     }
 

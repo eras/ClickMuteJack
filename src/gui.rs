@@ -3,7 +3,6 @@ use crate::click_mute_control;
 use crate::config;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
-use egui;
 use egui::plot::{Curve, Plot, Value};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -178,8 +177,7 @@ impl Stage {
                     };
                     let samples = sampler.get();
                     let width = ui.available_size().x;
-                    let scale =
-                        (2 as usize).pow(i32::clamp((width / 200.0).log2() as i32, 0, 2) as u32);
+                    let scale = 2_usize.pow(i32::clamp((width / 200.0).log2() as i32, 0, 2) as u32);
                     // 200 * scale cannot get greater than 1000 or so, or it segfaults in nvidia libraries.
                     let curve = if sample_max_x.is_some() {
                         Curve::from_values_iter(
