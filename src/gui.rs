@@ -141,33 +141,41 @@ impl Stage {
                 ui.selectable_value(plot_mode, PlotMode::LiveSignal, "Live signal");
                 ui.selectable_value(plot_mode, PlotMode::Capture, "Capture");
 
-                if *plot_mode == PlotMode::Capture {
-                    ui.separator();
-                    let mut click_info = click_info.lock().unwrap();
-                    let click_sampler = &mut click_info.click_sampler;
-                    if ui
-                        .selectable_label(click_sampler.is_in_hold(), "Hold")
-                        .clicked()
-                    {
-                        if click_sampler.is_in_hold() {
-                            click_sampler
-                                .acquire_after(Instant::now() + Duration::from_millis(200));
-                            click_sampler.clear();
-                        } else {
-                            click_sampler.hold();
-                        }
+                match *plot_mode {
+                    PlotMode::LiveSignal => {
+                        let mut click_info = click_info.lock().unwrap();
+                        let click_sampler = &mut click_info.click_sampler;
+                        click_sampler.live();
                     }
+                    PlotMode::Capture => {
+                        ui.separator();
+                        let mut click_info = click_info.lock().unwrap();
+                        let click_sampler = &mut click_info.click_sampler;
+                        if ui
+                            .selectable_label(click_sampler.is_in_hold(), "Hold")
+                            .clicked()
+                        {
+                            if click_sampler.is_in_hold() {
+                                click_sampler
+                                    .acquire_after(Instant::now() + Duration::from_millis(200));
+                                click_sampler.clear();
+                            } else {
+                                click_sampler.hold();
+                            }
+                        }
 
-                    if ui
-                        .selectable_label(click_sampler.is_in_auto(), "Auto")
-                        .clicked()
-                    {
-                        if click_sampler.is_in_auto() {
-                            click_sampler.hold();
-                        } else {
-                            click_sampler.auto();
+                        if ui
+                            .selectable_label(click_sampler.is_in_auto(), "Auto")
+                            .clicked()
+                        {
+                            if click_sampler.is_in_auto() {
+                                click_sampler.hold();
+                            } else {
+                                click_sampler.auto();
+                            }
                         }
                     }
+                    PlotMode::NoView => (),
                 }
             });
 
