@@ -16,9 +16,9 @@ pre-configured duration. Finally the module outputs a jack stream that
 can be used in place of the microphone.
 
 But that's not all! Not only is it able to mute the clicks, it's also
-able to unmute the clicks as well and mute everything else. With a
-click of a button you can let your colleagues enjoy the sweet sounds of
-your keyboard rig, while not being distracted by your other sounds, or
+able to unmute the clicks and mute everything else. With a click of a
+button you can let your colleagues enjoy the sweet sounds of your
+keyboard rig, while not being distracted by your other sounds, or
 speech. Use the "Invert muting" function for this.
 
 To work this of course needs a short delay. For me a 45-millisecond
