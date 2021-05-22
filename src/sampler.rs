@@ -79,7 +79,7 @@ impl Sampler {
             Mode::Capture => Mode::Capture,
             Mode::CaptureAfterTrigger(after) if Instant::now() >= *after => Mode::Capture,
             Mode::CaptureAfterTrigger(after) => Mode::CaptureAfterTrigger(*after),
-            (Mode::AutoHold | Mode::AutoCapture) => {
+            Mode::AutoHold | Mode::AutoCapture => {
                 self.clear();
                 Mode::AutoCapture
             }
