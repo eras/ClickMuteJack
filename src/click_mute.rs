@@ -173,7 +173,7 @@ impl ClickMute {
             .zip(out_b.iter_mut())
         {
             if Some(self.sample_index) == self.mute_t0_index {
-                if (click_info.invert_mute) {
+                if click_info.invert_mute {
                     self.fader_a.fade_in(self.fade_samples);
                     self.fader_b.fade_in(self.fade_samples);
                 } else {
@@ -201,7 +201,7 @@ impl ClickMute {
             *out_b = b;
 
             if self.sample_index == self.mute_t1_index {
-                if (click_info.invert_mute) {
+                if click_info.invert_mute {
                     self.fader_a.fade_out(self.fade_samples);
                     self.fader_b.fade_out(self.fade_samples);
                 } else {
