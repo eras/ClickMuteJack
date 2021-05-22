@@ -1,0 +1,84 @@
+on:
+  push:
+    tags:
+      - 'v*'
+
+name: tag
+jobs:
+  build_and_test:
+    name: ClickMuteJack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # https://stackoverflow.com/a/58178121
+      - name: Set release information
+        id: vars
+        run: echo ::set-output name=git_describe::"$(git describe --tags)"
+      - name: Cancel if no tag
+        if: ${{ steps.vars.outputs.git_describe == '' }}
+        run: false
+      - name: Build started notification
+        uses: s3krit/matrix-message-action@v0.0.3
+        with:
+          room_id: ${{ secrets.MATRIX_ROOM_ID }}
+          access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          message: "ClickMuteJack release ${{ steps.vars.outputs.git_describe }} build started. [Progress.](https://github.com/eras/ClickMuteJack/actions/runs/${{github.run_id}})"
+          server: ${{ secrets.MATRIX_SERVER }}
+      - name: Install build deps
+        run: sudo apt-get install libglvnd-dev libxi-dev libjack-jackd2-dev
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+      - name: Set annotated tag info information
+        id: vars2
+        run: echo ::set-output name=git_message::"$(git tag -n999 -l $(git describe --tags))"
+      - name: build
+        env:
+          GIT_DESCRIBE: ${{ steps.vars.outputs.git_describe }}
+        run: 'cargo +nightly -Z unstable-options --config rustc-link-search=\"/usr/lib/x86_64-linux-gnu\" build --release'
+      - run: strip target/release/click_mute
+      - uses: actions/upload-artifact@v2
+        with:
+          name: click-mute
+          path: |
+            target/release/click_mute
+      # https://github.com/actions/create-release
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: ${{ steps.vars2.outputs.git_message}}
+          draft: false
+          prerelease: false
+      # https://github.com/actions/upload-release-asset
+      - name: Upload Release Asset
+        id: upload_release_asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/release/click_mute
+          asset_name: click-mute-${{ steps.vars.outputs.git_describe }}-linux-x86_64.bin
+          asset_content_type: application/octet-stream
+      - name: Build succeeded notification
+        if: ${{ success() }}
+        uses: s3krit/matrix-message-action@v0.0.3
+        with:
+          room_id: ${{ secrets.MATRIX_ROOM_ID }}
+          access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          message: "ClickMuteJack release ${{ steps.vars.outputs.git_describe }} build complete. [Logs.](https://github.com/eras/ClickMuteJack/actions/runs/${{github.run_id}})"
+          server: ${{ secrets.MATRIX_SERVER }}
+      - name: Build failed notification
+        if: ${{ !success() }}
+        uses: s3krit/matrix-message-action@v0.0.3
+        with:
+          room_id: ${{ secrets.MATRIX_ROOM_ID }}
+          access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          message: "ClickMuteJack release ${{ steps.vars.outputs.git_describe }} build failed. [Logs.](https://github.com/eras/ClickMuteJack/actions/runs/${{github.run_id}})"
+          server: ${{ secrets.MATRIX_SERVER }}
