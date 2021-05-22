@@ -1,0 +1,40 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build started notification
+        uses: s3krit/matrix-message-action@v0.0.3
+        with:
+          room_id: ${{ secrets.MATRIX_ROOM_ID }}
+          access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          message: "ClickMuteJack build started. [Progress.](https://github.com/eras/ClickMuteJack/actions/runs/${{github.run_id}})"
+          server: ${{ secrets.MATRIX_SERVER }}
+      - uses: actions/checkout@v2
+      - name: Install build deps
+        run: sudo apt-get install libglvnd-dev libxi-dev libjack-jackd2-dev
+      - uses: actions-rs/toolchain@v1
+        with:
+          # non-stable needed to use -Z unstable-options --config
+          toolchain: nightly
+      - run: 'cargo +nightly -Z unstable-options --config rustc-link-search=\"/usr/lib/x86_64-linux-gnu\" build'
+      - name: Build succeeded notification
+        if: ${{ success() }}
+        uses: s3krit/matrix-message-action@v0.0.3
+        with:
+          room_id: ${{ secrets.MATRIX_ROOM_ID }}
+          access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          message: "ClickMuteJack build complete. [Logs.](https://github.com/eras/ClickMuteJack/actions/runs/${{github.run_id}})"
+          server: ${{ secrets.MATRIX_SERVER }}
+      - name: Build failed notification
+        if: ${{ !success() }}
+        uses: s3krit/matrix-message-action@v0.0.3
+        with:
+          room_id: ${{ secrets.MATRIX_ROOM_ID }}
+          access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          message: "ClickMuteJack build failed. [Logs.](https://github.com/eras/ClickMuteJack/actions/runs/${{github.run_id}})"
+          server: ${{ secrets.MATRIX_SERVER }}
