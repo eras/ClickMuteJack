@@ -6,14 +6,14 @@ use std::io;
 use std::io::Write;
 use thiserror::Error;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Delays {
     pub mute_offset: f64,
     pub mute_duration: f64,
     pub fade: f64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub struct Config {
     pub delays: Delays,
 }

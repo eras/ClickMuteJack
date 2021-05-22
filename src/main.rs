@@ -1,5 +1,6 @@
 mod click_info;
 mod click_mute;
+mod click_mute_control;
 mod clicky_events;
 mod config;
 mod delay;
@@ -13,10 +14,11 @@ use crate::click_info::ClickInfo;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
 use std::process::exit;
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 fn main() -> Result<(), error::Error> {
+    let (send_control, recv_control) = mpsc::channel();
     let config = match Config::load(config::FILENAME) {
         Ok(config) => config,
         Err(config::Error::ParseError(error)) => {
@@ -30,8 +32,9 @@ fn main() -> Result<(), error::Error> {
     let gui_join = {
         let mut exit_flag = exit_flag.clone();
         let click_info = click_info.clone();
+        let config = config.clone();
         thread::spawn(move || {
-            gui::main(exit_flag.clone(), click_info);
+            gui::main(exit_flag.clone(), click_info, config, send_control);
             exit_flag.activate();
         })
     };
@@ -39,7 +42,7 @@ fn main() -> Result<(), error::Error> {
         let mut exit_flag = exit_flag.clone();
         let click_info = click_info.clone();
         thread::spawn(move || {
-            click_mute::main(exit_flag.clone(), click_info, config);
+            click_mute::main(exit_flag.clone(), click_info, config, recv_control);
             exit_flag.activate();
         })
     };

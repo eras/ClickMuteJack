@@ -1,6 +1,7 @@
 use crate::{clicky_events::ClickyEvents, delay::Delay, fader::Fader};
 // use crossbeam_channel::bounded;
 use crate::click_info::ClickInfo;
+use crate::click_mute_control;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
 use std::sync::{Arc, Mutex};
@@ -31,10 +32,16 @@ struct ClickMute {
     mute_t1_index: usize,
 
     click_info: Arc<Mutex<ClickInfo>>,
+    control: click_mute_control::Receiver,
 }
 
 impl ClickMute {
-    fn new(client: &jack::Client, click_info: Arc<Mutex<ClickInfo>>, config: Config) -> ClickMute {
+    fn new(
+        client: &jack::Client,
+        click_info: Arc<Mutex<ClickInfo>>,
+        config: Config,
+        control: click_mute_control::Receiver,
+    ) -> ClickMute {
         let in_a = client
             .register_port("in_a", jack::AudioIn::default())
             .unwrap();
@@ -74,8 +81,8 @@ impl ClickMute {
             mute_offset_seconds,
             mute_duration_seconds,
             fade_samples,
-            delay_a: Delay::new(delay_samples),
-            delay_b: Delay::new(delay_samples),
+            delay_a: Delay::new(usize::max(1, delay_samples)),
+            delay_b: Delay::new(usize::max(1, delay_samples)),
 
             fader_a,
             fader_b,
@@ -87,6 +94,7 @@ impl ClickMute {
             mute_t1_index: 0,
 
             click_info,
+            control,
         }
     }
 
@@ -94,7 +102,36 @@ impl ClickMute {
         self.clicky_events.stop()
     }
 
+    fn update_config(&mut self, config: Config) {
+        // TODO: remove duplicate code by just moving complete ClickMute construction here?
+        let mute_offset_seconds = config.delays.mute_offset; // delta from the time we detect an event to until we mute sound (so, negative because we hear it before we get the vent)
+        let delay_seconds = f64::max(0.0, -mute_offset_seconds); // size of the delay buffer in seconds; sensibly just as long as the mute_offset is
+        let mute_duration_seconds = config.delays.mute_duration; // how long do we mute for?
+        let fade_seconds = config.delays.fade; // how long is the fade in/out to avoid pops?
+
+        let delay_samples = (delay_seconds * self.sample_rate as f64) as usize;
+        let fade_samples = (fade_seconds * self.sample_rate as f64) as usize;
+
+        self.delay_seconds = delay_seconds;
+        self.mute_offset_seconds = mute_offset_seconds;
+        self.mute_duration_seconds = mute_duration_seconds;
+        self.fade_samples = fade_samples;
+        self.delay_a = Delay::new(usize::max(1, delay_samples));
+        self.delay_b = Delay::new(usize::max(1, delay_samples));
+    }
+
+    fn process_control(&mut self) {
+        match self.control.try_recv() {
+            Ok(click_mute_control::Message::UpdateConfig(config)) => {
+                self.update_config(config);
+            }
+            Err(_) => (),
+        }
+    }
+
     fn process(&mut self, ps: &jack::ProcessScope) -> jack::Control {
+        self.process_control();
+
         let in_a = self.in_a.as_slice(ps);
         let in_b = self.in_b.as_slice(ps);
         let out_a = self.out_a.as_mut_slice(ps);
@@ -173,12 +210,17 @@ impl ClickMute {
     }
 }
 
-pub fn main(exit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>, config: Config) {
+pub fn main(
+    exit: LevelEvent,
+    click_info: Arc<Mutex<ClickInfo>>,
+    config: Config,
+    control: click_mute_control::Receiver,
+) {
     let (client, _status) =
         jack::Client::new("click_mute", jack::ClientOptions::NO_START_SERVER).unwrap();
 
     let mute = Arc::new(Mutex::new(Some(ClickMute::new(
-        &client, click_info, config,
+        &client, click_info, config, control,
     ))));
 
     // let (tx, rx) = bounded(1_000_000);

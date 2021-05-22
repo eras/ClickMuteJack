@@ -1,4 +1,7 @@
 use crate::click_info::ClickInfo;
+use crate::click_mute_control;
+use crate::config;
+use crate::config::Config;
 use crate::level_event::LevelEvent;
 use egui;
 use egui::plot::{Curve, Plot, Value};
@@ -22,20 +25,34 @@ struct Stage {
 
     // plot mode
     plot_mode: PlotMode,
+
+    config: Config,
+    control: click_mute_control::Sender,
 }
 
 impl Stage {
-    fn new(ctx: &mut mq::Context, quit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>) -> Self {
+    fn new(
+        ctx: &mut mq::Context,
+        quit: LevelEvent,
+        click_info: Arc<Mutex<ClickInfo>>,
+        config: Config,
+        control: click_mute_control::Sender,
+    ) -> Self {
         Self {
             egui_mq: egui_mq::EguiMq::new(ctx),
             quit,
             click_info,
             plot_mode: PlotMode::LiveSignal,
+            config,
+            control,
         }
     }
 
     fn ui(&mut self) {
         let plot_mode = &mut self.plot_mode;
+        let old_config = self.config;
+        let config = &mut self.config;
+        let control = &mut self.control;
 
         let egui_ctx = self.egui_mq.egui_ctx();
 
@@ -43,14 +60,79 @@ impl Stage {
 
         egui::CentralPanel::default().show(egui_ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.columns(2, |columns| {
+                ui.columns(3, |columns| {
                     let mut click_info = click_info.lock().unwrap();
                     columns[0].checkbox(&mut click_info.mute_enabled, "Automatic muting enabled");
-                    columns[1].with_layout(egui::Layout::right_to_left(), |ui| {
+                    if columns[1]
+                        .add_sized((0.0, 40.0), egui::Button::new("Save"))
+                        .clicked()
+                    {
+                        // TODO: move to separate thread to not hang the GUI thread during the save
+                        match config.save(config::FILENAME) {
+                            Ok(()) => (),
+                            Err(error) => {
+                                // TODO: better error reporting
+                                println!("Failed to save config: {:?}", error);
+                            }
+                        }
+                    }
+                    columns[2].with_layout(egui::Layout::right_to_left(), |ui| {
                         ui.label(format!("Number of clicks is {}", click_info.num_clicks))
                     });
                 });
             });
+
+            ui.separator();
+
+            ui.columns(3, |columns| {
+                columns[0].vertical(|ui| {
+                    ui.with_layout(
+                        egui::Layout::from_main_dir_and_cross_align(
+                            egui::Direction::TopDown,
+                            egui::Align::Center,
+                        ),
+                        |ui| ui.label("Mute offset"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut config.delays.mute_offset, -0.2..=0.1)
+                            .text("s")
+                            .fixed_decimals(3),
+                    );
+                });
+                columns[1].vertical(|ui| {
+                    ui.with_layout(
+                        egui::Layout::from_main_dir_and_cross_align(
+                            egui::Direction::TopDown,
+                            egui::Align::Center,
+                        ),
+                        |ui| ui.label("Mute duration"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut config.delays.mute_duration, 0.0..=1.0)
+                            .text("s")
+                            .fixed_decimals(3),
+                    );
+                });
+                columns[2].vertical(|ui| {
+                    ui.with_layout(
+                        egui::Layout::from_main_dir_and_cross_align(
+                            egui::Direction::TopDown,
+                            egui::Align::Center,
+                        ),
+                        |ui| ui.label("Fade time"),
+                    );
+                    ui.add(
+                        egui::Slider::new(&mut config.delays.fade, 0.0..=0.2)
+                            .text("s")
+                            .fixed_decimals(3),
+                    );
+                });
+            });
+            if *config != old_config {
+                control
+                    .send(click_mute_control::Message::UpdateConfig(*config))
+                    .unwrap();
+            }
 
             ui.separator();
 
@@ -222,7 +304,12 @@ impl mq::EventHandler for Stage {
     }
 }
 
-pub fn main(quit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>) {
+pub fn main(
+    quit: LevelEvent,
+    click_info: Arc<Mutex<ClickInfo>>,
+    config: Config,
+    control: click_mute_control::Sender,
+) {
     let conf = mq::conf::Conf {
         window_title: String::from("Click Mute"),
         // high_dpi: true,
@@ -230,7 +317,7 @@ pub fn main(quit: LevelEvent, click_info: Arc<Mutex<ClickInfo>>) {
         window_width: 600,
         ..Default::default()
     };
-    mq::start(conf, |mut ctx| {
-        mq::UserData::owning(Stage::new(&mut ctx, quit, click_info), ctx)
+    mq::start(conf, move |mut ctx| {
+        mq::UserData::owning(Stage::new(&mut ctx, quit, click_info, config, control), ctx)
     });
 }
