@@ -232,10 +232,7 @@ impl Stage {
             match *plot_mode {
                 PlotMode::NoView => (),
                 _ if !click_info.click_sampler.is_in_auto_hold()
-                    && click_info.click_sampler.is_in_auto() =>
-                {
-                    ()
-                }
+                    && click_info.click_sampler.is_in_auto() => {}
                 _ => {
                     let use_captured = (click_info.click_sampler.is_in_hold()
                         | click_info.click_sampler.is_in_auto_hold())
@@ -281,12 +278,11 @@ impl Stage {
                                 .height(ui.available_size().y)
                                 .include_x(min_x)
                                 .include_x(max_x);
-                            let plot = if !*autoscale_y {
+                            if !*autoscale_y {
                                 plot.include_y(-1.0).include_y(1.0)
                             } else {
                                 plot
-                            };
-                            plot
+                            }
                         });
                     }
                 }
