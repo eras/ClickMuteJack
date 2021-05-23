@@ -121,7 +121,7 @@ impl ClickMute {
             //     Save::new(1, "3.wav"),
             //     false,
             // )),
-            background_sampler: BackgroundSampler::new(10, 1024),
+            background_sampler: BackgroundSampler::new(20, 1024),
             background_looper: Looper::new(),
         }
     }
