@@ -1,9 +1,11 @@
-use crate::{clicky_events::ClickyEvents, delay::Delay, fader::Fader};
+use crate::{clicky_events::ClickyEvents, cross_fader::CrossFader, delay::Delay, fader::Fader};
 // use crossbeam_channel::bounded;
+use crate::background_sampler::BackgroundSampler;
 use crate::click_info::ClickInfo;
 use crate::click_mute_control;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
+use crate::looper::Looper;
 use crate::save::Save;
 use std::sync::{Arc, Mutex};
 
@@ -25,6 +27,9 @@ struct ClickMute {
     fader_a: Fader,
     fader_b: Fader,
 
+    cross_fader_a: CrossFader,
+    cross_fader_b: CrossFader,
+
     clicky_events: ClickyEvents,
 
     sample_index: usize,
@@ -36,6 +41,9 @@ struct ClickMute {
     control: click_mute_control::Receiver,
 
     save: Option<(Save, Save, Save, Save, bool)>,
+
+    background_sampler: BackgroundSampler,
+    background_looper: Looper,
 }
 
 impl ClickMute {
@@ -67,9 +75,13 @@ impl ClickMute {
         let delay_samples = (delay_seconds * sample_rate as f64) as usize;
         let fade_samples = (fade_seconds * sample_rate as f64) as usize;
 
+        let mut cross_fader_a = CrossFader::new(0.0);
+        let mut cross_fader_b = CrossFader::new(0.0);
         let mut fader_a = Fader::new(0.0);
         let mut fader_b = Fader::new(0.0);
 
+        cross_fader_a.fade_in(fade_samples);
+        cross_fader_b.fade_in(fade_samples);
         fader_a.fade_in(fade_samples);
         fader_b.fade_in(fade_samples);
 
@@ -89,6 +101,8 @@ impl ClickMute {
 
             fader_a,
             fader_b,
+            cross_fader_a,
+            cross_fader_b,
 
             clicky_events: ClickyEvents::new(),
 
@@ -107,6 +121,8 @@ impl ClickMute {
             //     Save::new(1, "3.wav"),
             //     false,
             // )),
+            background_sampler: BackgroundSampler::new(10, 1024),
+            background_looper: Looper::new(),
         }
     }
 
@@ -185,6 +201,9 @@ impl ClickMute {
                 if click_info.invert_mute {
                     self.fader_a.fade_in(self.fade_samples);
                     self.fader_b.fade_in(self.fade_samples);
+                } else if click_info.background_noise {
+                    self.cross_fader_a.fade_out(self.fade_samples);
+                    self.cross_fader_b.fade_out(self.fade_samples);
                 } else {
                     self.fader_a.fade_out(self.fade_samples);
                     self.fader_b.fade_out(self.fade_samples);
@@ -192,6 +211,7 @@ impl ClickMute {
                 self.mute_t0_index = None;
                 click_info.click_sampler.trigger();
                 self.save.iter_mut().for_each(|x| x.4 = !x.4);
+                self.background_sampler.pause();
             }
 
             if let Some(ref mut save) = self.save {
@@ -200,14 +220,23 @@ impl ClickMute {
 
             let a = self.delay_a.process(*in_a);
             let b = self.delay_b.process(*in_b);
+            self.background_sampler.sample((a, b));
 
             self.save.iter_mut().for_each(|x| x.1.process(a));
 
             click_info.live_sampler.sample(*in_a); // undelayed sample
             click_info.click_sampler.sample(a); // delayed sample
 
+            let (bg_a, bg_b) = self.background_looper.produce(&mut self.background_sampler);
             let (a, b) = if click_info.mute_enabled {
-                (self.fader_a.process(a), self.fader_b.process(b))
+                if click_info.invert_mute || !click_info.background_noise {
+                    (self.fader_a.process(a), self.fader_b.process(b))
+                } else {
+                    (
+                        self.cross_fader_a.process(a, bg_a),
+                        self.cross_fader_b.process(b, bg_b),
+                    )
+                }
             } else {
                 (a, b)
             };
@@ -228,6 +257,9 @@ impl ClickMute {
                 if click_info.invert_mute {
                     self.fader_a.fade_out(self.fade_samples);
                     self.fader_b.fade_out(self.fade_samples);
+                } else if click_info.background_noise {
+                    self.cross_fader_a.fade_in(self.fade_samples);
+                    self.cross_fader_b.fade_in(self.fade_samples);
                 } else {
                     self.fader_a.fade_in(self.fade_samples);
                     self.fader_b.fade_in(self.fade_samples);
@@ -235,6 +267,7 @@ impl ClickMute {
                 if !click_info.click_sampler.is_empty() {
                     click_info.click_sampler.hold_or_auto_hold();
                 }
+                self.background_sampler.resume();
             }
 
             self.sample_index += 1

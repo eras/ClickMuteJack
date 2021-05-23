@@ -74,6 +74,10 @@ impl Sampler {
         self.mode = Mode::Capture;
     }
 
+    pub fn is_full(&self) -> bool {
+        (self.write_index + 1) % self.max_size == self.read_index
+    }
+
     pub fn trigger(&mut self) {
         self.mode = match &self.mode {
             Mode::Capture => Mode::Capture,
@@ -120,5 +124,12 @@ impl Sampler {
         } else {
             self.data[self.read_index..self.write_index].to_vec()
         }
+    }
+
+    pub fn rms(&self) -> f32 {
+        let samples = self.get();
+        let sqr_sum: f32 = samples.iter().map(|x| x.powf(2.0)).sum();
+        let mean_sqr_sum = sqr_sum / samples.len() as f32;
+        mean_sqr_sum.sqrt()
     }
 }

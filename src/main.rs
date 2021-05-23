@@ -1,13 +1,16 @@
+mod background_sampler;
 mod click_info;
 mod click_mute;
 mod click_mute_control;
 mod clicky_events;
 mod config;
+mod cross_fader;
 mod delay;
 mod error;
 mod fader;
 mod gui;
 mod level_event;
+mod looper;
 mod sampler;
 mod save;
 

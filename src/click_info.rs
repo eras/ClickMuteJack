@@ -6,6 +6,7 @@ pub struct ClickInfo {
     pub click_sampler: Sampler,
     pub mute_enabled: bool,
     pub invert_mute: bool,
+    pub background_noise: bool,
     pub num_clicks: usize,
 }
 
@@ -20,6 +21,7 @@ impl ClickInfo {
             },
             mute_enabled: true,
             invert_mute: false,
+            background_noise: true,
             num_clicks: 0,
         }
     }

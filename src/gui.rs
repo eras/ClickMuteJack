@@ -96,11 +96,15 @@ impl Stage {
 
         egui::CentralPanel::default().show(egui_ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.columns(4, |columns| {
+                ui.columns(5, |columns| {
                     let mut click_info = click_info.lock().unwrap();
-                    columns[0].checkbox(&mut click_info.mute_enabled, "Automatic muting enabled");
-                    columns[1].checkbox(&mut click_info.invert_mute, "Invert muting");
-                    if columns[2]
+                    columns[0].checkbox(&mut click_info.mute_enabled, "Automatic\nmuting");
+                    columns[1].checkbox(&mut click_info.invert_mute, "Invert\nmuting");
+                    if click_info.invert_mute {
+                        click_info.background_noise = false;
+                    }
+                    columns[2].checkbox(&mut click_info.background_noise, "Background\nnoise");
+                    if columns[3]
                         .add_sized((0.0, 40.0), egui::Button::new("Save"))
                         .clicked()
                     {
@@ -113,8 +117,8 @@ impl Stage {
                             }
                         }
                     }
-                    columns[3].with_layout(egui::Layout::right_to_left(), |ui| {
-                        ui.label(format!("Number of clicks is {}", click_info.num_clicks))
+                    columns[4].with_layout(egui::Layout::right_to_left(), |ui| {
+                        ui.label(format!("#{}", click_info.num_clicks))
                     });
                 });
             });

@@ -19,6 +19,7 @@ thiserror = "1.0.22"
 anyhow = "1.0.34"
 atomicwrites = "0.3.0"
 hound = "3.4.0"
+rand = "0.8.3"
 
 # [lib]
 # name = "mute_keyboard_plugin"
