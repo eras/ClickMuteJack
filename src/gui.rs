@@ -51,6 +51,35 @@ impl Stage {
         }
     }
 
+    fn sample_min_max<I: Iterator<Item = usize>>(
+        indices: I,
+        samples: Vec<f32>,
+        time_offset: f64,
+    ) -> (Vec<egui::plot::Value>, Vec<egui::plot::Value>) {
+        if samples.is_empty() {
+            (vec![], vec![])
+        } else {
+            let (values_min, values_max, _) = indices.fold(
+                (vec![], vec![], None),
+                |(mut values_min, mut values_max, prev), i| {
+                    let x = i as f64 / 48000.0 + time_offset;
+                    if let Some(prev) = prev {
+                        // TODO: don't require 0.0 to be min/max. buuut it doesn't matter because zoom is disabled, and
+                        // this can rarely happen if data is zoomed out.
+                        let minmax = samples
+                            [usize::min(samples.len() - 1, prev)..usize::min(samples.len(), i)]
+                            .iter()
+                            .fold((0.0f32, 0.0f32), |(min, max), b| (min.min(*b), max.max(*b)));
+                        values_min.push(Value::new(x as f64, minmax.0));
+                        values_max.push(Value::new(x as f64, minmax.1));
+                    }
+                    (values_min, values_max, Some(i))
+                },
+            );
+            (values_min, values_max)
+        }
+    }
+
     fn ui(&mut self) {
         let plot_mode = &mut self.plot_mode;
         let old_config = self.config;
@@ -206,55 +235,34 @@ impl Stage {
                     };
                     let samples = sampler.get();
                     let width = ui.available_size().x;
-                    let scale = 2_usize.pow(i32::clamp((width / 200.0).log2() as i32, 0, 2) as u32);
-                    // 200 * scale cannot get greater than 1000 or so, or it segfaults in nvidia libraries.
-                    let values = if use_captured {
-                        let values: Vec<_> = (0..200 * scale)
-                            .map(|i| (samples.len() / 200) / scale * i)
-                            .map(|i| {
-                                let x = i as f64 / 48000.0
-                                    + if *origo_at_click {
-                                        config.delays.mute_offset
-                                    } else {
-                                        0.0
-                                    };
-                                Value::new(
-                                    x as f64,
-                                    if i < samples.len() {
-                                        samples[i] as f64
-                                    } else {
-                                        0.0
-                                    },
-                                )
-                            })
-                            .collect();
-                        values
+                    let scale = 2_usize.pow(i32::clamp((width / 200.0).log2() as i32, 0, 1) as u32);
+                    // 200 * scale * number fo curves cannot get greater than 1000 or so, or it segfaults in nvidia
+                    // libraries.
+                    let (values_min, values_max) = if use_captured {
+                        let samples_len = samples.len();
+                        Self::sample_min_max(
+                            (0..200 * scale).map(|i| (samples_len / 200) / scale * i),
+                            samples,
+                            if *origo_at_click {
+                                config.delays.mute_offset
+                            } else {
+                                0.0
+                            },
+                        )
                     } else {
-                        let values: Vec<_> = (0..200 * scale)
-                            .map(|i| 20 / scale * i)
-                            .map(|i| {
-                                let x = i as f64 / 48000.0;
-                                Value::new(
-                                    x as f64,
-                                    if i < samples.len() {
-                                        samples[i] as f64
-                                    } else {
-                                        0.0
-                                    },
-                                )
-                            })
-                            .collect();
-                        values
+                        Self::sample_min_max((0..200 * scale).map(|i| 20 / scale * i), samples, 0.0)
                     };
-                    if !values.is_empty() {
-                        let min_x = values[0].x;
-                        let max_x = values[values.len() - 1].x;
-                        let curve = Curve::from_values(values);
+                    if !values_min.is_empty() {
+                        let min_x = values_min[0].x;
+                        let max_x = values_min[values_min.len() - 1].x;
+                        let curve_min = Curve::from_values(values_min);
+                        let curve_max = Curve::from_values(values_max);
                         ui.add(
                             Plot::new("Captured audio")
                                 .allow_zoom(false)
                                 .allow_drag(false)
-                                .curve(curve)
+                                .curve(curve_min.color(egui::Rgba::from_rgb(0.2, 0.2, 0.2)))
+                                .curve(curve_max.color(egui::Rgba::from_rgb(0.2, 0.2, 0.2)))
                                 .center_y_axis(true)
                                 .width(width)
                                 .height(ui.available_size().y)
