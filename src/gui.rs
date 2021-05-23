@@ -28,6 +28,8 @@ struct Stage {
 
     config: Config,
     control: click_mute_control::Sender,
+
+    origo_at_click: bool,
 }
 
 impl Stage {
@@ -45,6 +47,7 @@ impl Stage {
             plot_mode: PlotMode::LiveSignal,
             config,
             control,
+            origo_at_click: false,
         }
     }
 
@@ -53,6 +56,7 @@ impl Stage {
         let old_config = self.config;
         let config = &mut self.config;
         let control = &mut self.control;
+        let origo_at_click = &mut self.origo_at_click;
 
         let egui_ctx = self.egui_mq.egui_ctx();
 
@@ -170,6 +174,13 @@ impl Stage {
                                 click_sampler.auto();
                             }
                         }
+
+                        if ui
+                            .selectable_label(*origo_at_click, "Origo at click")
+                            .clicked()
+                        {
+                            *origo_at_click = !*origo_at_click;
+                        }
                     }
                     PlotMode::NoView => (),
                 }
@@ -201,7 +212,12 @@ impl Stage {
                         let values: Vec<_> = (0..200 * scale)
                             .map(|i| (samples.len() / 200) / scale * i)
                             .map(|i| {
-                                let x = i as f64 / 48000.0;
+                                let x = i as f64 / 48000.0
+                                    + if *origo_at_click {
+                                        config.delays.mute_offset
+                                    } else {
+                                        0.0
+                                    };
                                 Value::new(
                                     x as f64,
                                     if i < samples.len() {
