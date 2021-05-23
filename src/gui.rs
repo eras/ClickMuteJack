@@ -60,7 +60,7 @@ impl Stage {
             (vec![], vec![])
         } else {
             let (values_min, values_max, _) = indices.fold(
-                (vec![], vec![], None),
+                (Vec::with_capacity(1024), Vec::with_capacity(1024), None),
                 |(mut values_min, mut values_max, prev), i| {
                     let x = i as f64 / 48000.0 + time_offset;
                     if let Some(prev) = prev {
