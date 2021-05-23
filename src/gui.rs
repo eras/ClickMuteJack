@@ -231,6 +231,8 @@ impl Stage {
                     };
                     ui.add({
                         let plot = Plot::new("Captured audio")
+                            .allow_zoom(false)
+                            .allow_drag(false)
                             .curve(curve)
                             .center_y_axis(true)
                             .width(width)
