@@ -184,64 +184,68 @@ impl Stage {
                     ()
                 }
                 _ => {
-                    let (sampler, sample_max_x) = if (click_info.click_sampler.is_in_hold()
+                    let use_captured = (click_info.click_sampler.is_in_hold()
                         | click_info.click_sampler.is_in_auto_hold())
                         && !click_info.click_sampler.is_empty()
-                        && *plot_mode == PlotMode::Capture
-                    {
-                        (
-                            &click_info.click_sampler,
-                            Some(click_info.click_sampler.get().len() as f64 / 48000.0),
-                        )
+                        && *plot_mode == PlotMode::Capture;
+                    let sampler = if use_captured {
+                        &click_info.click_sampler
                     } else {
-                        (&click_info.live_sampler, None)
+                        &click_info.live_sampler
                     };
                     let samples = sampler.get();
                     let width = ui.available_size().x;
                     let scale = 2_usize.pow(i32::clamp((width / 200.0).log2() as i32, 0, 2) as u32);
                     // 200 * scale cannot get greater than 1000 or so, or it segfaults in nvidia libraries.
-                    let curve = if sample_max_x.is_some() {
-                        Curve::from_values_iter(
-                            (0..200 * scale)
-                                .map(|i| (samples.len() / 200) / scale * i)
-                                .map(|i| {
-                                    let x = i as f64 / 48000.0;
-                                    Value::new(
-                                        x as f64,
-                                        if i < samples.len() {
-                                            samples[i] as f64
-                                        } else {
-                                            0.0
-                                        },
-                                    )
-                                }),
-                        )
+                    let values = if use_captured {
+                        let values: Vec<_> = (0..200 * scale)
+                            .map(|i| (samples.len() / 200) / scale * i)
+                            .map(|i| {
+                                let x = i as f64 / 48000.0;
+                                Value::new(
+                                    x as f64,
+                                    if i < samples.len() {
+                                        samples[i] as f64
+                                    } else {
+                                        0.0
+                                    },
+                                )
+                            })
+                            .collect();
+                        values
                     } else {
-                        Curve::from_values_iter((0..200 * scale).map(|i| 20 / scale * i).map(|i| {
-                            let x = i as f64 / 48000.0;
-                            Value::new(
-                                x as f64,
-                                if i < samples.len() {
-                                    samples[i] as f64
-                                } else {
-                                    0.0
-                                },
-                            )
-                        }))
+                        let values: Vec<_> = (0..200 * scale)
+                            .map(|i| 20 / scale * i)
+                            .map(|i| {
+                                let x = i as f64 / 48000.0;
+                                Value::new(
+                                    x as f64,
+                                    if i < samples.len() {
+                                        samples[i] as f64
+                                    } else {
+                                        0.0
+                                    },
+                                )
+                            })
+                            .collect();
+                        values
                     };
-                    ui.add({
-                        let plot = Plot::new("Captured audio")
-                            .allow_zoom(false)
-                            .allow_drag(false)
-                            .curve(curve)
-                            .center_y_axis(true)
-                            .width(width)
-                            .height(ui.available_size().y);
-                        match sample_max_x {
-                            Some(max_x) => plot.include_x(0.0).include_x(max_x),
-                            None => plot.include_y(-1.0).include_y(1.0),
-                        }
-                    });
+                    if !values.is_empty() {
+                        let min_x = values[0].x;
+                        let max_x = values[values.len() - 1].x;
+                        let curve = Curve::from_values(values);
+                        ui.add(
+                            Plot::new("Captured audio")
+                                .allow_zoom(false)
+                                .allow_drag(false)
+                                .curve(curve)
+                                .center_y_axis(true)
+                                .width(width)
+                                .height(ui.available_size().y)
+                                .include_x(min_x)
+                                .include_x(max_x),
+                        );
+                    }
                 }
             }
         });
