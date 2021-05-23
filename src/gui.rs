@@ -30,6 +30,7 @@ struct Stage {
     control: click_mute_control::Sender,
 
     origo_at_click: bool,
+    autoscale_y: bool,
 }
 
 impl Stage {
@@ -48,6 +49,7 @@ impl Stage {
             config,
             control,
             origo_at_click: false,
+            autoscale_y: true,
         }
     }
 
@@ -86,6 +88,7 @@ impl Stage {
         let config = &mut self.config;
         let control = &mut self.control;
         let origo_at_click = &mut self.origo_at_click;
+        let autoscale_y = &mut self.autoscale_y;
 
         let egui_ctx = self.egui_mq.egui_ctx();
 
@@ -213,6 +216,12 @@ impl Stage {
                     }
                     PlotMode::NoView => (),
                 }
+                if ui
+                    .selectable_label(*autoscale_y, "Autoscale Y axis")
+                    .clicked()
+                {
+                    *autoscale_y = !*autoscale_y;
+                }
             });
 
             let click_info = click_info.lock().unwrap();
@@ -257,8 +266,8 @@ impl Stage {
                         let max_x = values_min[values_min.len() - 1].x;
                         let curve_min = Curve::from_values(values_min);
                         let curve_max = Curve::from_values(values_max);
-                        ui.add(
-                            Plot::new("Captured audio")
+                        ui.add({
+                            let plot = Plot::new("Captured audio")
                                 .allow_zoom(false)
                                 .allow_drag(false)
                                 .curve(curve_min.color(egui::Rgba::from_rgb(0.2, 0.2, 0.2)))
@@ -267,8 +276,14 @@ impl Stage {
                                 .width(width)
                                 .height(ui.available_size().y)
                                 .include_x(min_x)
-                                .include_x(max_x),
-                        );
+                                .include_x(max_x);
+                            let plot = if !*autoscale_y {
+                                plot.include_y(-1.0).include_y(1.0)
+                            } else {
+                                plot
+                            };
+                            plot
+                        });
                     }
                 }
             }
