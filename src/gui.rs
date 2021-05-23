@@ -4,6 +4,7 @@ use crate::config;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
 use egui::plot::{Curve, Plot, Value};
+use std::ops::RangeInclusive;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use {egui_miniquad as egui_mq, miniquad as mq};
@@ -85,48 +86,43 @@ impl Stage {
             ui.separator();
 
             ui.columns(3, |columns| {
-                columns[0].vertical(|ui| {
-                    ui.with_layout(
-                        egui::Layout::from_main_dir_and_cross_align(
-                            egui::Direction::TopDown,
-                            egui::Align::Center,
-                        ),
-                        |ui| ui.label("Mute offset"),
-                    );
-                    ui.add(
-                        egui::Slider::new(&mut config.delays.mute_offset, -0.2..=0.1)
-                            .text("s")
-                            .fixed_decimals(3),
-                    );
-                });
-                columns[1].vertical(|ui| {
-                    ui.with_layout(
-                        egui::Layout::from_main_dir_and_cross_align(
-                            egui::Direction::TopDown,
-                            egui::Align::Center,
-                        ),
-                        |ui| ui.label("Mute duration"),
-                    );
-                    ui.add(
-                        egui::Slider::new(&mut config.delays.mute_duration, 0.0..=1.0)
-                            .text("s")
-                            .fixed_decimals(3),
-                    );
-                });
-                columns[2].vertical(|ui| {
-                    ui.with_layout(
-                        egui::Layout::from_main_dir_and_cross_align(
-                            egui::Direction::TopDown,
-                            egui::Align::Center,
-                        ),
-                        |ui| ui.label("Fade time"),
-                    );
-                    ui.add(
-                        egui::Slider::new(&mut config.delays.fade, 0.0..=0.2)
-                            .text("s")
-                            .fixed_decimals(3),
-                    );
-                });
+                let slider = |column: &mut egui::Ui,
+                              label: &str,
+                              variable: &mut f64,
+                              range: RangeInclusive<f64>| {
+                    column.vertical(|ui| {
+                        ui.with_layout(
+                            egui::Layout::from_main_dir_and_cross_align(
+                                egui::Direction::TopDown,
+                                egui::Align::Center,
+                            ),
+                            |ui| ui.label(label),
+                        );
+                        ui.add(
+                            egui::Slider::new(variable, range)
+                                .text("s")
+                                .fixed_decimals(3),
+                        );
+                    });
+                };
+                slider(
+                    &mut columns[0],
+                    "Mute offset",
+                    &mut config.delays.mute_offset,
+                    -0.2..=0.1,
+                );
+                slider(
+                    &mut columns[1],
+                    "Mute duration",
+                    &mut config.delays.mute_duration,
+                    0.0..=1.0,
+                );
+                slider(
+                    &mut columns[2],
+                    "Fade time",
+                    &mut config.delays.fade,
+                    0.0..=0.2,
+                );
             });
             if *config != old_config {
                 control
