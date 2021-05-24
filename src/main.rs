@@ -44,12 +44,13 @@ fn main() -> Result<(), error::Error> {
     let click_mute_join = {
         let mut exit_flag = exit_flag.clone();
         thread::spawn(move || {
-            click_mute::main(exit_flag.clone(), click_info, config, recv_control);
+            let result = click_mute::main(exit_flag.clone(), click_info, config, recv_control);
             exit_flag.activate();
+            result
         })
     };
     exit_flag.wait();
-    click_mute_join.join().unwrap();
+    click_mute_join.join().unwrap()?;
     gui_join.join().unwrap();
     Ok(())
 }

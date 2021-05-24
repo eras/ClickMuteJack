@@ -8,6 +8,7 @@ use crate::level_event::LevelEvent;
 use crate::looper::Looper;
 use crate::save::Save;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
 struct ClickMute {
     in_a: jack::Port<jack::AudioIn>,
@@ -44,6 +45,20 @@ struct ClickMute {
 
     background_sampler: BackgroundSampler,
     background_looper: Looper,
+}
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error(transparent)]
+    JackError(#[from] jack::Error),
+    // #[error(transparent)]
+    // TomlSerError(#[from] toml::ser::Error),
+
+    // #[error(transparent)]
+    // IOError(#[from] io::Error),
+
+    // #[error(transparent)]
+    // AtomicIOError(#[from] atomicwrites::Error<io::Error>),
 }
 
 impl ClickMute {
@@ -282,9 +297,8 @@ pub fn main(
     click_info: Arc<Mutex<ClickInfo>>,
     config: Config,
     control: click_mute_control::Receiver,
-) {
-    let (client, _status) =
-        jack::Client::new("click_mute", jack::ClientOptions::NO_START_SERVER).unwrap();
+) -> Result<(), Error> {
+    let (client, _status) = jack::Client::new("click_mute", jack::ClientOptions::NO_START_SERVER)?;
 
     let mute = Arc::new(Mutex::new(Some(ClickMute::new(
         &client, click_info, config, control,
@@ -305,12 +319,12 @@ pub fn main(
         }
     });
 
-    let active_client = client.activate_async((), process).unwrap();
+    let active_client = client.activate_async((), process)?;
 
     // TODO: handle jack errors
     exit.wait();
 
-    active_client.deactivate().unwrap();
+    active_client.deactivate()?;
 
     if let Ok(mut x) = mute.lock() {
         match &mut *x {
@@ -318,4 +332,6 @@ pub fn main(
             None => (),
         }
     };
+
+    Ok(())
 }
