@@ -1,5 +1,3 @@
-use crate::{clicky_events::ClickyEvents, cross_fader::CrossFader, delay::Delay, fader::Fader};
-// use crossbeam_channel::bounded;
 use crate::background_sampler::BackgroundSampler;
 use crate::click_info::ClickInfo;
 use crate::click_mute_control;
@@ -7,6 +5,7 @@ use crate::config::Config;
 use crate::level_event::LevelEvent;
 use crate::looper::Looper;
 use crate::save::Save;
+use crate::{clicky_events::ClickyEvents, cross_fader::CrossFader, delay::Delay, fader::Fader};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
@@ -183,14 +182,7 @@ impl ClickMute {
                     + ((self.delay_seconds + self.mute_duration_seconds + t1)
                         * self.sample_rate as f64) as usize;
 
-                // println!(
-                //     "set {} {}",
-                //     (match self.mute_t0_index {
-                //         Some(index) => index as i64 - self.sample_index as i64,
-                //         None => 0,
-                //     }),
-                //     self.mute_t1_index as i64 - self.sample_index as i64
-                // );
+                // here was a debug message for outputting mute indices
                 assert!(Some(self.mute_t1_index) >= self.mute_t0_index);
                 let mut click_info = self.click_info.lock().unwrap();
                 click_info.num_clicks += 1;
@@ -253,10 +245,6 @@ impl ClickMute {
                 .iter_mut()
                 .for_each(|x| x.3.process(if x.4 { 1.0 } else { 0.0 }));
 
-            // let muting =
-            //     self.mute_t0_index <= self.sample_index && self.sample_index <= self.mute_t1_index;
-            // let a = if muting { 0.0 } else { a };
-            // let b = if muting { 0.0 } else { b };
             *out_a = a;
             *out_b = b;
 
@@ -296,7 +284,6 @@ pub fn main(
         &client, click_info, config, control,
     ))));
 
-    // let (tx, rx) = bounded(1_000_000);
     let process = jack::ClosureProcessHandler::new({
         let mute = mute.clone();
         move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
