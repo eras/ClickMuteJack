@@ -51,14 +51,6 @@ struct ClickMute {
 pub enum Error {
     #[error(transparent)]
     JackError(#[from] jack::Error),
-    // #[error(transparent)]
-    // TomlSerError(#[from] toml::ser::Error),
-
-    // #[error(transparent)]
-    // IOError(#[from] io::Error),
-
-    // #[error(transparent)]
-    // AtomicIOError(#[from] atomicwrites::Error<io::Error>),
 }
 
 impl ClickMute {
