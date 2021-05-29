@@ -7,4 +7,7 @@ pub enum Error {
 
     #[error(transparent)]
     ClickMuteError(#[from] crate::click_mute::Error),
+
+    #[error("unsupported path")]
+    UnsupportedPath(String), // message
 }

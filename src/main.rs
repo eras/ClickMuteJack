@@ -18,9 +18,52 @@ use crate::click_info::ClickInfo;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
 use clap::{App, Arg};
+use directories::ProjectDirs;
+use std::path::Path;
 use std::process::exit;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
+
+fn get_config_file(config_file_arg: Option<&str>) -> Result<String, error::Error> {
+    let joined_pathbuf;
+    let joined_path;
+    // argument overrides all automation
+    let config_file: &Path = if let Some(config_file) = config_file_arg {
+        Path::new(config_file)
+    } else {
+        let config_file = Path::new(&config::FILENAME);
+        // does the default config filename exist? if so, go with that
+        let config_file: &Path = if config_file.exists() {
+            config_file
+        } else {
+            // otherwise, choose the XDG directory if it can be created
+            (if let Some(proj_dirs) = ProjectDirs::from("", "Erkki Seppälä", "click_mute") {
+                let config_dir = proj_dirs.config_dir();
+                if let Ok(()) = std::fs::create_dir_all(config_dir) {
+                    // it's fine to set this to a non-existing file; it will be ignored, but
+                    // the filename will still be used for saving
+                    joined_pathbuf = config_dir.join("click_mute.ini");
+                    joined_path = joined_pathbuf.as_path();
+                    Some(&joined_path)
+                } else {
+                    None
+                }
+            } else {
+                None
+            })
+            .unwrap_or(&config_file)
+        };
+        config_file
+    };
+    let config_file = if let Some(path) = config_file.to_str() {
+        path
+    } else {
+        return Err(error::Error::UnsupportedPath(
+            "Sorry, unsupported config file path (needs to be legal UTF8)".to_string(),
+        ));
+    };
+    Ok(config_file.to_string())
+}
 
 fn main() -> Result<(), error::Error> {
     let args = App::new("click_mute")
@@ -35,11 +78,7 @@ fn main() -> Result<(), error::Error> {
                 .about("Configuration file to load (and save, if the save function is used)"),
         )
         .get_matches();
-    let config_file = if let Some(config_file) = args.value_of("config") {
-        config_file.to_string()
-    } else {
-        config::FILENAME.to_string()
-    };
+    let config_file = get_config_file(args.value_of("config"))?;
     let (send_control, recv_control) = mpsc::channel();
     let config = match Config::load(&config_file) {
         Ok(config) => config,

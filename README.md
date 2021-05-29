@@ -73,8 +73,11 @@ and `mute_duration_seconds` in [`click_mute.rs`](src/click_mute.rs).
 
 ## Configuring
 
-The current settings can be saved with the Save-button to
-`click_mute.ini`. You can find the defaults from
+The current settings can be saved (as they are loaded) with the
+Save-button to `click_mute.ini` in the XDG directory, so likely
+`$HOME/.config/click_mute/`. However, if a `click_mute.ini` exists in
+the current working directory, it will be used instead, for both
+loading and saving. You can find the defaults from
 [click_mute.ini.example](click_mute.ini.example).
 
 You may change the configuration file to use with the `--config`
