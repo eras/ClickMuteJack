@@ -24,6 +24,7 @@ use std::thread;
 
 fn main() -> Result<(), error::Error> {
     let args = App::new("click_mute")
+        .version(option_env!("GIT_DESCRIBE").unwrap_or_else(|| env!("VERGEN_SEMVER")))
         .author("Erkki Seppälä <erkki.seppala@vincit.fi>")
         .about("Input-device-synchronized microphone muting for Jack/Pipewire")
         .arg(

@@ -25,3 +25,6 @@ clap = "3.0.0-beta.2"
 # [lib]
 # name = "mute_keyboard_plugin"
 # crate-type = ["dylib"]
+
+[build-dependencies]
+vergen = "3"
