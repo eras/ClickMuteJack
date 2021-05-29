@@ -77,6 +77,9 @@ The current settings can be saved with the Save-button to
 `click_mute.ini`. You can find the defaults from
 [click_mute.ini.example](click_mute.ini.example).
 
+You may change the configuration file to use with the `--config`
+swich. `--help` works also.
+
 ### Parameters
 
 `mute_offset`: number of seconds from the reception of the keyboard

@@ -17,13 +17,30 @@ mod save;
 use crate::click_info::ClickInfo;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
+use clap::{App, Arg};
 use std::process::exit;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
 fn main() -> Result<(), error::Error> {
+    let args = App::new("click_mute")
+        .author("Erkki Seppälä <erkki.seppala@vincit.fi>")
+        .about("Input-device-synchronized microphone muting for Jack/Pipewire")
+        .arg(
+            Arg::new("config")
+                .long("config")
+                .short('c')
+                .takes_value(true)
+                .about("Configuration file to load (and save, if the save function is used)"),
+        )
+        .get_matches();
+    let config_file = if let Some(config_file) = args.value_of("config") {
+        config_file.to_string()
+    } else {
+        config::FILENAME.to_string()
+    };
     let (send_control, recv_control) = mpsc::channel();
-    let config = match Config::load(config::FILENAME) {
+    let config = match Config::load(&config_file) {
         Ok(config) => config,
         Err(config::Error::ParseError(error)) => {
             println!("{}", error);
@@ -37,7 +54,13 @@ fn main() -> Result<(), error::Error> {
         let mut exit_flag = exit_flag.clone();
         let click_info = click_info.clone();
         thread::spawn(move || {
-            gui::main(exit_flag.clone(), click_info, config, send_control);
+            gui::main(
+                exit_flag.clone(),
+                click_info,
+                config,
+                config_file,
+                send_control,
+            );
             exit_flag.activate();
         })
     };

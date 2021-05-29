@@ -1,6 +1,5 @@
 use crate::click_info::ClickInfo;
 use crate::click_mute_control;
-use crate::config;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
 use egui::plot::{Curve, Plot, Value};
@@ -31,6 +30,8 @@ struct Stage {
 
     origo_at_click: bool,
     autoscale_y: bool,
+
+    config_file: String,
 }
 
 impl Stage {
@@ -39,6 +40,7 @@ impl Stage {
         quit: LevelEvent,
         click_info: Arc<Mutex<ClickInfo>>,
         config: Config,
+        config_file: String,
         control: click_mute_control::Sender,
     ) -> Self {
         Self {
@@ -47,6 +49,7 @@ impl Stage {
             click_info,
             plot_mode: PlotMode::LiveSignal,
             config,
+            config_file,
             control,
             origo_at_click: false,
             autoscale_y: true,
@@ -89,6 +92,7 @@ impl Stage {
         let control = &mut self.control;
         let origo_at_click = &mut self.origo_at_click;
         let autoscale_y = &mut self.autoscale_y;
+        let config_file = &self.config_file;
 
         let egui_ctx = self.egui_mq.egui_ctx();
 
@@ -109,7 +113,7 @@ impl Stage {
                         .clicked()
                     {
                         // TODO: move to separate thread to not hang the GUI thread during the save
-                        match config.save(config::FILENAME) {
+                        match config.save(&config_file) {
                             Ok(()) => (),
                             Err(error) => {
                                 // TODO: better error reporting
@@ -373,6 +377,7 @@ pub fn main(
     quit: LevelEvent,
     click_info: Arc<Mutex<ClickInfo>>,
     config: Config,
+    config_file: String,
     control: click_mute_control::Sender,
 ) {
     let conf = mq::conf::Conf {
@@ -383,6 +388,9 @@ pub fn main(
         ..Default::default()
     };
     mq::start(conf, move |mut ctx| {
-        mq::UserData::owning(Stage::new(&mut ctx, quit, click_info, config, control), ctx)
+        mq::UserData::owning(
+            Stage::new(&mut ctx, quit, click_info, config, config_file, control),
+            ctx,
+        )
     });
 }
