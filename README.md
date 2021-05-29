@@ -81,7 +81,7 @@ loading and saving. You can find the defaults from
 [click_mute.ini.example](click_mute.ini.example).
 
 You may change the configuration file to use with the `--config`
-swich. `--help` works also.
+switch. `--help` works also.
 
 ### Parameters
 
