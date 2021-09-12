@@ -44,6 +44,15 @@ impl Repeated {
         self.prev_time = time;
     }
 
+    pub fn show(&self, label: &str) {
+        eprintln!(
+            "{} {:?}, average {:?}",
+            label,
+            self.prev_time(),
+            self.average(),
+        );
+    }
+
     pub fn average(&self) -> Duration {
         if self.num_samples > 0 {
             self.total_time / self.num_samples
