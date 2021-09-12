@@ -45,7 +45,11 @@ impl Repeated {
     }
 
     pub fn average(&self) -> Duration {
-        self.total_time / self.num_samples
+        if self.num_samples > 0 {
+            self.total_time / self.num_samples
+        } else {
+            Duration::new(0, 0)
+        }
     }
 
     pub fn prev_time(&self) -> Duration {
