@@ -1,5 +1,4 @@
 use crate::level_event::LevelEvent;
-use crate::measure;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::os::unix::prelude::RawFd;
@@ -13,11 +12,6 @@ pub struct ClickyEvents {
     reenumerator_join: Option<thread::JoinHandle<()>>,
     reenumerator_stop: LevelEvent,
     epoll_fd: RawFd,
-
-    sample1: measure::Repeated,
-    sample2: measure::Repeated,
-    sample3: measure::Repeated,
-    sample4: measure::Repeated,
 }
 
 fn make_device_mapping(devices: Vec<evdev::Device>) -> HashMap<CString, evdev::Device> {
@@ -152,11 +146,6 @@ impl ClickyEvents {
             reenumerator_join,
             reenumerator_stop,
             epoll_fd,
-
-            sample1: measure::Repeated::new(),
-            sample2: measure::Repeated::new(),
-            sample3: measure::Repeated::new(),
-            sample4: measure::Repeated::new(),
         })
     }
 
@@ -170,7 +159,6 @@ impl ClickyEvents {
     /** If clicked, returns a timespan of two negative numbers indicating in which
      * time window relative to the current time the events occurred (in seconds) */
     pub fn when_clicked(&mut self) -> Option<(f64, f64)> {
-        let mark = measure::Mark::new();
         let mut clicked = None;
         let mut time_t1: libc::timespec = unsafe { std::mem::zeroed() };
         unsafe {
@@ -178,9 +166,6 @@ impl ClickyEvents {
         };
         if let Ok(mut devices) = self.devices.clone().lock() {
             let mut local_devices = devices.take().unwrap();
-
-            self.sample1.sample(&mark);
-
             for removed in &local_devices.removed {
                 epoll::ctl(
                     self.epoll_fd,
@@ -203,8 +188,6 @@ impl ClickyEvents {
             }
             local_devices.added.clear();
 
-            self.sample2.sample(&mark);
-
             let mut fd_events_in =
                 vec![epoll::Event::new(epoll::Events::empty(), 0); 2 * local_devices.devices.len()];
 
@@ -215,8 +198,6 @@ impl ClickyEvents {
             };
 
             let fd_events_out: Vec<_> = fd_events_in.splice(..num_events, vec![]).collect();
-
-            self.sample3.sample(&mark);
 
             for device in &mut local_devices.devices {
                 let device_fd = device.fd();
@@ -261,40 +242,8 @@ impl ClickyEvents {
                     }
                 }
             }
-
-            self.sample4.sample(&mark);
-
             // put it back 🙄
             *devices = Some(local_devices);
-        }
-
-        if self.sample1.prev_time() > self.sample1.average() * 2 {
-            eprintln!(
-                "self.sample1 {:?}, average {:?}",
-                self.sample1.prev_time(),
-                self.sample1.average(),
-            );
-        }
-        if self.sample2.prev_time() > self.sample2.average() * 2 {
-            eprintln!(
-                "self.sample2 {:?}, average {:?}",
-                self.sample2.prev_time(),
-                self.sample2.average(),
-            );
-        }
-        if self.sample3.prev_time() > self.sample3.average() * 2 {
-            eprintln!(
-                "self.sample3 {:?}, average {:?}",
-                self.sample3.prev_time(),
-                self.sample3.average(),
-            );
-        }
-        if self.sample4.prev_time() > self.sample4.average() * 2 {
-            eprintln!(
-                "self.sample4 {:?}, average {:?}",
-                self.sample4.prev_time(),
-                self.sample4.average(),
-            );
         }
         clicked
     }
