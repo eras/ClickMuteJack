@@ -31,13 +31,21 @@ If the Ubuntu 20.04 -based binary on the [GitHub releases
 page](../../releases/latest/) works for you, maybe use that?
 Otherwise:
 
-1) Install the Rust compiler with Cargo e.g. with https://rustup.rs/
+1) 
+```
+sudo apt-get install ca-certificates curl file \
+    build-essential autoconf automake autotools-dev \
+	libtool xutils-dev libssl-dev git pkg-config \
+	libncurses-dev
+```
 
-2) `sudo apt-get install libglvnd-dev libxi-dev libjack-jackd2-dev`
+2) Install the Rust compiler with Cargo e.g. with https://rustup.rs/
 
-3) `cargo install --git https://github.com/eras/ClickMuteJack`
+3) `sudo apt-get install libglvnd-dev libxi-dev libjack-jackd2-dev`
 
-4) `$HOME/.cargo/bin/click_mute` has now been installed
+4) `cargo install --git https://github.com/eras/ClickMuteJack`
+
+5) `$HOME/.cargo/bin/click_mute` has now been installed
 
 ## Setting it up with Pipewire
 
