@@ -4,6 +4,7 @@ use crate::click_mute_control;
 use crate::config::Config;
 use crate::level_event::LevelEvent;
 use crate::looper::Looper;
+use crate::measure;
 use crate::save::Save;
 use crate::{clicky_events::ClickyEvents, cross_fader::CrossFader, delay::Delay, fader::Fader};
 use std::sync::{Arc, Mutex};
@@ -30,7 +31,7 @@ struct ClickMute {
     cross_fader_a: CrossFader,
     cross_fader_b: CrossFader,
 
-    clicky_events: ClickyEvents,
+    clicky_events: Arc<Mutex<ClickyEvents>>,
 
     sample_index: usize,
 
@@ -44,6 +45,8 @@ struct ClickMute {
 
     background_sampler: BackgroundSampler,
     background_looper: Looper,
+
+    measure_when_clicked: Arc<Mutex<measure::Repeated>>,
 }
 
 #[derive(Error, Debug)]
@@ -110,7 +113,7 @@ impl ClickMute {
             cross_fader_a,
             cross_fader_b,
 
-            clicky_events: ClickyEvents::new(),
+            clicky_events: Arc::new(Mutex::new(ClickyEvents::new())),
 
             sample_index: 0,
             mute_t0_index: None,
@@ -129,11 +132,13 @@ impl ClickMute {
             // )),
             background_sampler: BackgroundSampler::new(20, 1024),
             background_looper: Looper::new(),
+
+            measure_when_clicked: Arc::new(Mutex::new(measure::Repeated::new())),
         }
     }
 
     fn stop(&mut self) {
-        self.clicky_events.stop()
+        self.clicky_events.lock().unwrap().stop()
     }
 
     fn update_config(&mut self, config: Config) {
@@ -168,7 +173,10 @@ impl ClickMute {
         let out_a = self.out_a.as_mut_slice(ps);
         let out_b = self.out_b.as_mut_slice(ps);
 
-        match self.clicky_events.when_clicked() {
+        let mut measure_when_clicked = self.measure_when_clicked.lock().unwrap();
+        let mut clicky_events = self.clicky_events.lock().unwrap();
+
+        match measure_when_clicked.measure(move || clicky_events.when_clicked()) {
             None => (),
             Some((t0, t1)) => {
                 let mute_wait_seconds = self.delay_seconds + t0 + self.mute_offset_seconds;
@@ -187,6 +195,14 @@ impl ClickMute {
                 let mut click_info = self.click_info.lock().unwrap();
                 click_info.num_clicks += 1;
             }
+        }
+
+        if measure_when_clicked.prev_time() > measure_when_clicked.average() * 2 {
+            eprintln!(
+                "Getting clicky events took {:?}, average {:?}",
+                measure_when_clicked.prev_time(),
+                measure_when_clicked.average(),
+            );
         }
 
         let mut click_info = self.click_info.lock().unwrap();
