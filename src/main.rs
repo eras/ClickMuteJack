@@ -11,6 +11,7 @@ mod fader;
 mod gui;
 mod level_event;
 mod looper;
+mod measure;
 mod sampler;
 mod save;
 
