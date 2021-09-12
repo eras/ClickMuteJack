@@ -74,11 +74,11 @@ fn reenumerator_thread(
             println!("No devices with key output found; missing permissions to /dev/input?");
         }
 
+        let mut new = make_device_mapping(key_devices);
         if let Ok(mut write_devices) = clicky_devices.clone().lock() {
             // find new and removed devices
             let device_state = (*write_devices).take().unwrap();
             let mut old = make_device_mapping(device_state.devices);
-            let mut new = make_device_mapping(key_devices);
             let mut added_fds = device_state.added;
             let mut removed_fds = device_state.removed;
 
