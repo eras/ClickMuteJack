@@ -200,7 +200,7 @@ impl ClickMute {
             }
         }
 
-        if measure_when_clicked.prev_time() > measure_when_clicked.average() * 2 {
+        if measure_when_clicked.prev_time() > measure_when_clicked.average() * 10 {
             eprintln!(
                 "Getting clicky events took {:?}, average {:?}",
                 measure_when_clicked.prev_time(),
