@@ -53,9 +53,6 @@ struct ClickMute {
 pub enum Error {
     #[error(transparent)]
     JackError(#[from] jack::Error),
-
-    #[error(transparent)]
-    ClickyEventsError(#[from] crate::clicky_events::Error),
 }
 
 impl ClickMute {
@@ -64,7 +61,7 @@ impl ClickMute {
         click_info: Arc<Mutex<ClickInfo>>,
         config: Config,
         control: click_mute_control::Receiver,
-    ) -> Result<ClickMute, Error> {
+    ) -> ClickMute {
         let in_a = client
             .register_port("in_a", jack::AudioIn::default())
             .unwrap();
@@ -97,7 +94,7 @@ impl ClickMute {
         fader_a.fade_in(fade_samples);
         fader_b.fade_in(fade_samples);
 
-        Ok(ClickMute {
+        ClickMute {
             in_a,
             in_b,
             out_a,
@@ -116,7 +113,7 @@ impl ClickMute {
             cross_fader_a,
             cross_fader_b,
 
-            clicky_events: Arc::new(Mutex::new(ClickyEvents::new()?)),
+            clicky_events: Arc::new(Mutex::new(ClickyEvents::new())),
 
             sample_index: 0,
             mute_t0_index: None,
@@ -137,7 +134,7 @@ impl ClickMute {
             background_looper: Looper::new(),
 
             measure_when_clicked: Arc::new(Mutex::new(measure::Repeated::new())),
-        })
+        }
     }
 
     fn stop(&mut self) {
@@ -301,7 +298,7 @@ pub fn main(
 
     let mute = Arc::new(Mutex::new(Some(ClickMute::new(
         &client, click_info, config, control,
-    )?)));
+    ))));
 
     let process = jack::ClosureProcessHandler::new({
         let mute = mute.clone();
